@@ -70,7 +70,7 @@ static int wg_pm_notification(struct notifier_block *nb, unsigned long action, v
 	 * don't actually want to clear keys.
 	 */
 	if (IS_ENABLED(CONFIG_PM_AUTOSLEEP) ||
-	    IS_ENABLED(CONFIG_PM_USERSPACE_AUTOSLEEP))
+		IS_ENABLED(CONFIG_PM_USERSPACE_AUTOSLEEP))
 		return 0;
 
 	if (action != PM_HIBERNATION_PREPARE && action != PM_SUSPEND_PREPARE)
@@ -154,10 +154,10 @@ static netdev_tx_t wg_xmit(struct sk_buff *skb, struct net_device *dev)
 		ret = -ENOKEY;
 		if (skb->protocol == htons(ETH_P_IP))
 			net_dbg_ratelimited("%s: No peer has allowed IPs matching %pI4\n",
-					    dev->name, &ip_hdr(skb)->daddr);
+						dev->name, &ip_hdr(skb)->daddr);
 		else if (skb->protocol == htons(ETH_P_IPV6))
 			net_dbg_ratelimited("%s: No peer has allowed IPs matching %pI6\n",
-					    dev->name, &ipv6_hdr(skb)->daddr);
+						dev->name, &ipv6_hdr(skb)->daddr);
 		goto err_icmp;
 	}
 
@@ -165,7 +165,7 @@ static netdev_tx_t wg_xmit(struct sk_buff *skb, struct net_device *dev)
 	if (unlikely(family != AF_INET && family != AF_INET6)) {
 		ret = -EDESTADDRREQ;
 		net_dbg_ratelimited("%s: No valid endpoint has been configured or discovered for peer %llu\n",
-				    dev->name, peer->internal_id);
+					dev->name, peer->internal_id);
 		goto err_peer;
 	}
 
@@ -276,10 +276,10 @@ static void wg_setup(struct net_device *dev)
 {
 	struct wg_device *wg = netdev_priv(dev);
 	enum { WG_NETDEV_FEATURES = NETIF_F_HW_CSUM | NETIF_F_RXCSUM |
-				    NETIF_F_SG | NETIF_F_GSO |
-				    NETIF_F_GSO_SOFTWARE | NETIF_F_HIGHDMA };
+					NETIF_F_SG | NETIF_F_GSO |
+					NETIF_F_GSO_SOFTWARE | NETIF_F_HIGHDMA };
 	const int overhead = MESSAGE_MINIMUM_LENGTH + sizeof(struct udphdr) +
-			     max(sizeof(struct ipv6hdr), sizeof(struct iphdr));
+				 max(sizeof(struct ipv6hdr), sizeof(struct iphdr));
 
 	dev->netdev_ops = &netdev_ops;
 	dev->header_ops = &ip_tunnel_header_ops;
@@ -307,8 +307,8 @@ static void wg_setup(struct net_device *dev)
 }
 
 static int wg_newlink(struct net *src_net, struct net_device *dev,
-		      struct nlattr *tb[], struct nlattr *data[],
-		      struct netlink_ext_ack *extack)
+			  struct nlattr *tb[], struct nlattr *data[],
+			  struct netlink_ext_ack *extack)
 {
 	struct wg_device *wg = netdev_priv(dev);
 	int ret = -ENOMEM;
@@ -481,79 +481,79 @@ void wg_device_uninit(void)
 // TODO: cleanup hardcoded constants in this func
 void wg_device_handle_post_config(struct net_device *dev, struct amnezia_config *asc)
 {
-    struct wg_device *wg = netdev_priv(dev);
-    bool a_sec_on = false;
+	struct wg_device *wg = netdev_priv(dev);
+	bool a_sec_on = false;
 
-    if (!asc->advanced_security_enabled)
-        return;
+	if (!asc->advanced_security_enabled)
+		return;
 
-    mutex_lock(&wg->security_config_lock);
+	mutex_lock(&wg->security_config_lock);
 
-    if (asc->junk_packet_count < 0) {
-        // TODO error
-    }
+	if (asc->junk_packet_count < 0) {
+		// TODO error
+	}
 
-    wg->advanced_security_config.junk_packet_count = asc->junk_packet_count;
-    if (asc->junk_packet_count != 0)
-        a_sec_on = true;
+	wg->advanced_security_config.junk_packet_count = asc->junk_packet_count;
+	if (asc->junk_packet_count != 0)
+		a_sec_on = true;
 
-    wg->advanced_security_config.junk_packet_min_size = asc->junk_packet_min_size;
-    if (asc->junk_packet_min_size != 0)
-        a_sec_on = true;
+	wg->advanced_security_config.junk_packet_min_size = asc->junk_packet_min_size;
+	if (asc->junk_packet_min_size != 0)
+		a_sec_on = true;
 
-    if (asc->junk_packet_count > 0 && asc->junk_packet_min_size == asc->junk_packet_max_size)
-        asc->junk_packet_max_size++;
+	if (asc->junk_packet_count > 0 && asc->junk_packet_min_size == asc->junk_packet_max_size)
+		asc->junk_packet_max_size++;
 
-    if (asc->junk_packet_max_size >= 65535) {
-        wg->advanced_security_config.junk_packet_min_size = 0;
-        wg->advanced_security_config.junk_packet_max_size = 1;
+	if (asc->junk_packet_max_size >= 65535) {
+		wg->advanced_security_config.junk_packet_min_size = 0;
+		wg->advanced_security_config.junk_packet_max_size = 1;
 
-        // TODO error
-    } else if (asc->junk_packet_max_size < asc->junk_packet_min_size) {
-        // TODO error
-    } else
-        wg->advanced_security_config.junk_packet_max_size = asc->junk_packet_max_size;
+		// TODO error
+	} else if (asc->junk_packet_max_size < asc->junk_packet_min_size) {
+		// TODO error
+	} else
+		wg->advanced_security_config.junk_packet_max_size = asc->junk_packet_max_size;
 
-    if (asc->junk_packet_max_size != 0)
-        a_sec_on = true;
+	if (asc->junk_packet_max_size != 0)
+		a_sec_on = true;
 
-    if (asc->init_packet_junk_size + 148 >= 65535) {
-        // TODO error
-    } else
-        wg->advanced_security_config.init_packet_junk_size = asc->init_packet_junk_size;
+	if (asc->init_packet_junk_size + 148 >= 65535) {
+		// TODO error
+	} else
+		wg->advanced_security_config.init_packet_junk_size = asc->init_packet_junk_size;
 
-    if (asc->init_packet_junk_size != 0)
-        a_sec_on = true;
+	if (asc->init_packet_junk_size != 0)
+		a_sec_on = true;
 
-    if (asc->response_packet_junk_size + 92 >= 65535) {
-        // TODO error
-    } else
-        wg->advanced_security_config.response_packet_junk_size = asc->response_packet_junk_size;
+	if (asc->response_packet_junk_size + 92 >= 65535) {
+		// TODO error
+	} else
+		wg->advanced_security_config.response_packet_junk_size = asc->response_packet_junk_size;
 
-    if (asc->response_packet_junk_size != 0)
-        a_sec_on = true;
+	if (asc->response_packet_junk_size != 0)
+		a_sec_on = true;
 
-    if (asc->init_packet_magic_header > 4) {
-        a_sec_on = true;
-        wg->advanced_security_config.init_packet_magic_header = asc->init_packet_magic_header;
-    }
+	if (asc->init_packet_magic_header > 4) {
+		a_sec_on = true;
+		wg->advanced_security_config.init_packet_magic_header = asc->init_packet_magic_header;
+	}
 
-    if (asc->response_packet_magic_header > 4) {
-        a_sec_on = true;
-        wg->advanced_security_config.response_packet_magic_header = asc->response_packet_magic_header;
-    }
+	if (asc->response_packet_magic_header > 4) {
+		a_sec_on = true;
+		wg->advanced_security_config.response_packet_magic_header = asc->response_packet_magic_header;
+	}
 
-    if (asc->underload_packet_magic_header > 4) {
-        a_sec_on = true;
-        wg->advanced_security_config.underload_packet_magic_header = asc->underload_packet_magic_header;
-    }
+	if (asc->underload_packet_magic_header > 4) {
+		a_sec_on = true;
+		wg->advanced_security_config.underload_packet_magic_header = asc->underload_packet_magic_header;
+	}
 
-    if (asc->transport_packet_magic_header > 4) {
-        a_sec_on = true;
-        wg->advanced_security_config.transport_packet_magic_header = asc->transport_packet_magic_header;
-    }
+	if (asc->transport_packet_magic_header > 4) {
+		a_sec_on = true;
+		wg->advanced_security_config.transport_packet_magic_header = asc->transport_packet_magic_header;
+	}
 
-    wg->advanced_security_config.advanced_security_enabled = a_sec_on;
+	wg->advanced_security_config.advanced_security_enabled = a_sec_on;
 
-    mutex_unlock(&wg->security_config_lock);
+	mutex_unlock(&wg->security_config_lock);
 }

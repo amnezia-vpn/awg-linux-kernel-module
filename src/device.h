@@ -38,16 +38,16 @@ struct prev_queue {
 };
 
 struct amnezia_config {
-    bool advanced_security_enabled;
-    u16 junk_packet_count;
-    u16 junk_packet_min_size;
-    u16 junk_packet_max_size;
-    u16 init_packet_junk_size;
-    u16 response_packet_junk_size;
-    u32 init_packet_magic_header;
-    u32 response_packet_magic_header;
-    u32 underload_packet_magic_header;
-    u32 transport_packet_magic_header;
+	bool advanced_security_enabled;
+	u16 junk_packet_count;
+	u16 junk_packet_min_size;
+	u16 junk_packet_max_size;
+	u16 init_packet_junk_size;
+	u16 response_packet_junk_size;
+	u32 init_packet_magic_header;
+	u32 response_packet_magic_header;
+	u32 underload_packet_magic_header;
+	u32 transport_packet_magic_header;
 };
 
 struct wg_device {
@@ -63,7 +63,7 @@ struct wg_device {
 	struct allowedips peer_allowedips;
 	struct mutex device_update_lock, socket_update_lock, security_config_lock;
 	struct list_head device_list, peer_list;
-    struct amnezia_config advanced_security_config;
+	struct amnezia_config advanced_security_config;
 	atomic_t handshake_queue_len;
 	unsigned int num_peers, device_update_gen;
 	u32 fwmark;
