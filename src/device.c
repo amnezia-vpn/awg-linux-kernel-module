@@ -70,7 +70,7 @@ static int wg_pm_notification(struct notifier_block *nb, unsigned long action, v
 	 * don't actually want to clear keys.
 	 */
 	if (IS_ENABLED(CONFIG_PM_AUTOSLEEP) ||
-		IS_ENABLED(CONFIG_PM_USERSPACE_AUTOSLEEP))
+	    IS_ENABLED(CONFIG_PM_USERSPACE_AUTOSLEEP))
 		return 0;
 
 	if (action != PM_HIBERNATION_PREPARE && action != PM_SUSPEND_PREPARE)
