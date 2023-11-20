@@ -26,7 +26,7 @@ module:
 	@$(MAKE) -C $(KERNELDIR) M=$(PWD) WIREGUARD_VERSION="$(WIREGUARD_VERSION)" modules
 
 module-debug:
-	@$(MAKE) -C $(KERNELDIR) M=$(PWD) V=1 CONFIG_WIREGUARD_DEBUG=y WIREGUARD_VERSION="$(WIREGUARD_VERSION)" modules
+	@$(MAKE) -C $(KERNELDIR) M=$(PWD) V=1 CONFIG_AMNEZIA_DEBUG=y WIREGUARD_VERSION="$(WIREGUARD_VERSION)" modules
 
 clean:
 	@$(MAKE) -C $(KERNELDIR) M=$(PWD) clean
@@ -38,7 +38,7 @@ module-install:
 install: module-install
 
 rwildcard=$(foreach d,$(wildcard $1*),$(call rwildcard,$d/,$2) $(filter $(subst *,%,$2),$d))
-DKMS_SOURCES := version.h Makefile Kbuild Kconfig dkms.conf $(filter-out version.h wireguard.mod.c tests/%,$(call rwildcard,,*.c *.h *.S *.pl *.include))
+DKMS_SOURCES := version.h Makefile Kbuild Kconfig dkms.conf $(filter-out version.h amnezia.mod.c tests/%,$(call rwildcard,,*.c *.h *.S *.pl *.include))
 dkms-install: $(DKMS_SOURCES)
 	@$(foreach f,$(DKMS_SOURCES),install -v -m0644 -D $(f) $(DESTDIR)$(DKMSDIR)/$(f);)
 

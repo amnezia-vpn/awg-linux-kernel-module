@@ -9,7 +9,9 @@
 #include "socket.h"
 #include "queueing.h"
 #include "messages.h"
+
 #include "uapi/wireguard.h"
+
 #include <linux/if.h>
 #include <net/genetlink.h>
 #include <net/sock.h>
@@ -25,7 +27,16 @@ static const struct nla_policy device_policy[WGDEVICE_A_MAX + 1] = {
 	[WGDEVICE_A_FLAGS]		= { .type = NLA_U32 },
 	[WGDEVICE_A_LISTEN_PORT]	= { .type = NLA_U16 },
 	[WGDEVICE_A_FWMARK]		= { .type = NLA_U32 },
-	[WGDEVICE_A_PEERS]		= { .type = NLA_NESTED }
+	[WGDEVICE_A_PEERS]		= { .type = NLA_NESTED },
+    [WGDEVICE_A_JC]		= { .type = NLA_U16 },
+    [WGDEVICE_A_JMIN]		= { .type = NLA_U16 },
+    [WGDEVICE_A_JMAX]		= { .type = NLA_U16 },
+    [WGDEVICE_A_S1]		= { .type = NLA_U16 },
+    [WGDEVICE_A_S2]		= { .type = NLA_U16 },
+    [WGDEVICE_A_H1]		= { .type = NLA_U32 },
+    [WGDEVICE_A_H2]		= { .type = NLA_U32 },
+    [WGDEVICE_A_H3]		= { .type = NLA_U32 },
+    [WGDEVICE_A_H4]		= { .type = NLA_U32 }
 };
 
 static const struct nla_policy peer_policy[WGPEER_A_MAX + 1] = {
@@ -217,6 +228,7 @@ static int wg_get_device_dump(struct sk_buff *skb, struct netlink_callback *cb)
 
 	rtnl_lock();
 	mutex_lock(&wg->device_update_lock);
+	mutex_lock(&wg->advanced_security_config);
 	cb->seq = wg->device_update_gen;
 	next_peer_cursor = ctx->next_peer;
 
@@ -231,7 +243,25 @@ static int wg_get_device_dump(struct sk_buff *skb, struct netlink_callback *cb)
 				wg->incoming_port) ||
 		    nla_put_u32(skb, WGDEVICE_A_FWMARK, wg->fwmark) ||
 		    nla_put_u32(skb, WGDEVICE_A_IFINDEX, wg->dev->ifindex) ||
-		    nla_put_string(skb, WGDEVICE_A_IFNAME, wg->dev->name))
+		    nla_put_string(skb, WGDEVICE_A_IFNAME, wg->dev->name) ||
+            nla_put_u16(skb, WGDEVICE_A_JC,
+                        wg->advanced_security_config.junk_packet_count) ||
+            nla_put_u16(skb, WGDEVICE_A_JMIN,
+                        wg->advanced_security_config.junk_packet_min_size) ||
+            nla_put_u16(skb, WGDEVICE_A_JMAX,
+                        wg->advanced_security_config.junk_packet_max_size) ||
+            nla_put_u16(skb, WGDEVICE_A_S1,
+                        wg->advanced_security_config.init_packet_junk_size) ||
+            nla_put_u16(skb, WGDEVICE_A_S2,
+                        wg->advanced_security_config.response_packet_junk_size) ||
+            nla_put_u32(skb, WGDEVICE_A_H1,
+                        wg->advanced_security_config.init_packet_magic_header) ||
+            nla_put_u32(skb, WGDEVICE_A_H2,
+                        wg->advanced_security_config.response_packet_magic_header) ||
+            nla_put_u32(skb, WGDEVICE_A_H3,
+                        wg->advanced_security_config.underload_packet_magic_header) ||
+            nla_put_u32(skb, WGDEVICE_A_H4,
+                        wg->advanced_security_config.transport_packet_magic_header))
 			goto out;
 
 		down_read(&wg->static_identity.lock);
@@ -279,6 +309,7 @@ out:
 		wg_peer_get(next_peer_cursor);
 	wg_peer_put(ctx->next_peer);
 	mutex_unlock(&wg->device_update_lock);
+	mutex_unlock(&wg->advanced_security_config);
 	rtnl_unlock();
 
 	if (ret) {
@@ -434,14 +465,13 @@ static int set_peer(struct wg_device *wg, struct nlattr **attrs)
 	if (attrs[WGPEER_A_ENDPOINT]) {
 		struct sockaddr *addr = nla_data(attrs[WGPEER_A_ENDPOINT]);
 		size_t len = nla_len(attrs[WGPEER_A_ENDPOINT]);
+		struct endpoint endpoint = { { { 0 } } };
 
-		if ((len == sizeof(struct sockaddr_in) &&
-		     addr->sa_family == AF_INET) ||
-		    (len == sizeof(struct sockaddr_in6) &&
-		     addr->sa_family == AF_INET6)) {
-			struct endpoint endpoint = { { { 0 } } };
-
-			memcpy(&endpoint.addr, addr, len);
+		if (len == sizeof(struct sockaddr_in) && addr->sa_family == AF_INET) {
+			endpoint.addr4 = *(struct sockaddr_in *)addr;
+			wg_socket_set_peer_endpoint(peer, &endpoint);
+		} else if (len == sizeof(struct sockaddr_in6) && addr->sa_family == AF_INET6) {
+			endpoint.addr6 = *(struct sockaddr_in6 *)addr;
 			wg_socket_set_peer_endpoint(peer, &endpoint);
 		}
 	}
@@ -492,6 +522,7 @@ out:
 static int wg_set_device(struct sk_buff *skb, struct genl_info *info)
 {
 	struct wg_device *wg = lookup_interface(info->attrs, skb);
+    struct amnezia_config *asc = kzalloc(sizeof(*asc), GFP_KERNEL);
 	u32 flags = 0;
 	int ret;
 
@@ -536,7 +567,52 @@ static int wg_set_device(struct sk_buff *skb, struct genl_info *info)
 			goto out;
 	}
 
-	if (flags & WGDEVICE_F_REPLACE_PEERS)
+    if (info->attrs[WGDEVICE_A_JC]) {
+        asc->advanced_security_enabled = true;
+        asc->junk_packet_count = nla_get_u16(info->attrs[WGDEVICE_A_JC]);
+    }
+
+    if (info->attrs[WGDEVICE_A_JMIN]) {
+        asc->advanced_security_enabled = true;
+        asc->junk_packet_min_size = nla_get_u16(info->attrs[WGDEVICE_A_JMIN]);
+    }
+
+    if (info->attrs[WGDEVICE_A_JMAX]) {
+        asc->advanced_security_enabled = true;
+        asc->junk_packet_max_size = nla_get_u16(info->attrs[WGDEVICE_A_JMAX]);
+    }
+
+    if (info->attrs[WGDEVICE_A_S1]) {
+        asc->advanced_security_enabled = true;
+        asc->init_packet_junk_size = nla_get_u16(info->attrs[WGDEVICE_A_S1]);
+    }
+
+    if (info->attrs[WGDEVICE_A_S2]) {
+        asc->advanced_security_enabled = true;
+        asc->response_packet_junk_size = nla_get_u16(info->attrs[WGDEVICE_A_S2]);
+    }
+
+    if (info->attrs[WGDEVICE_A_H1]) {
+        asc->advanced_security_enabled = true;
+        asc->init_packet_magic_header = nla_get_u32(info->attrs[WGDEVICE_A_H1]);
+    }
+
+    if (info->attrs[WGDEVICE_A_H2]) {
+        asc->advanced_security_enabled = true;
+        asc->response_packet_magic_header = nla_get_u32(info->attrs[WGDEVICE_A_H2]);
+    }
+
+    if (info->attrs[WGDEVICE_A_H3]) {
+        asc->advanced_security_enabled = true;
+        asc->underload_packet_magic_header = nla_get_u32(info->attrs[WGDEVICE_A_H3]);
+    }
+
+    if (info->attrs[WGDEVICE_A_H4]) {
+        asc->advanced_security_enabled = true;
+        asc->transport_packet_magic_header = nla_get_u32(info->attrs[WGDEVICE_A_H4]);
+    }
+
+    if (flags & WGDEVICE_F_REPLACE_PEERS)
 		wg_peer_remove_all(wg);
 
 	if (info->attrs[WGDEVICE_A_PRIVATE_KEY] &&
@@ -545,6 +621,7 @@ static int wg_set_device(struct sk_buff *skb, struct genl_info *info)
 		u8 *private_key = nla_data(info->attrs[WGDEVICE_A_PRIVATE_KEY]);
 		u8 public_key[NOISE_PUBLIC_KEY_LEN];
 		struct wg_peer *peer, *temp;
+		bool send_staged_packets;
 
 		if (!crypto_memneq(wg->static_identity.static_private,
 				   private_key, NOISE_PUBLIC_KEY_LEN))
@@ -563,14 +640,17 @@ static int wg_set_device(struct sk_buff *skb, struct genl_info *info)
 		}
 
 		down_write(&wg->static_identity.lock);
-		wg_noise_set_static_identity_private_key(&wg->static_identity,
-							 private_key);
-		list_for_each_entry_safe(peer, temp, &wg->peer_list,
-					 peer_list) {
+		send_staged_packets = !wg->static_identity.has_identity && netif_running(wg->dev);
+		wg_noise_set_static_identity_private_key(&wg->static_identity, private_key);
+		send_staged_packets = send_staged_packets && wg->static_identity.has_identity;
+
+		wg_cookie_checker_precompute_device_keys(&wg->cookie_checker);
+		list_for_each_entry_safe(peer, temp, &wg->peer_list, peer_list) {
 			wg_noise_precompute_static_static(peer);
 			wg_noise_expire_current_peer_keypairs(peer);
+			if (send_staged_packets)
+				wg_packet_send_staged_packets(peer);
 		}
-		wg_cookie_checker_precompute_device_keys(&wg->cookie_checker);
 		up_write(&wg->static_identity.lock);
 	}
 skip_set_private_key:
@@ -596,54 +676,37 @@ out:
 	rtnl_unlock();
 	dev_put(wg->dev);
 out_nodev:
+    wg_device_handle_post_config(wg->dev, asc);
+    kfree(asc);
 	if (info->attrs[WGDEVICE_A_PRIVATE_KEY])
 		memzero_explicit(nla_data(info->attrs[WGDEVICE_A_PRIVATE_KEY]),
 				 nla_len(info->attrs[WGDEVICE_A_PRIVATE_KEY]));
 	return ret;
 }
 
-#ifndef COMPAT_CANNOT_USE_CONST_GENL_OPS
-static const
-#else
-static
-#endif
-struct genl_ops genl_ops[] = {
+static const struct genl_ops genl_ops[] = {
 	{
 		.cmd = WG_CMD_GET_DEVICE,
-#ifndef COMPAT_CANNOT_USE_NETLINK_START
 		.start = wg_get_device_start,
-#endif
 		.dumpit = wg_get_device_dump,
 		.done = wg_get_device_done,
-#ifdef COMPAT_CANNOT_INDIVIDUAL_NETLINK_OPS_POLICY
-		.policy = device_policy,
-#endif
 		.flags = GENL_UNS_ADMIN_PERM
 	}, {
 		.cmd = WG_CMD_SET_DEVICE,
 		.doit = wg_set_device,
-#ifdef COMPAT_CANNOT_INDIVIDUAL_NETLINK_OPS_POLICY
-		.policy = device_policy,
-#endif
 		.flags = GENL_UNS_ADMIN_PERM
 	}
 };
 
-static struct genl_family genl_family
-#ifndef COMPAT_CANNOT_USE_GENL_NOPS
-__ro_after_init = {
+static struct genl_family genl_family __ro_after_init = {
 	.ops = genl_ops,
 	.n_ops = ARRAY_SIZE(genl_ops),
-#else
-= {
-#endif
+	.resv_start_op = WG_CMD_SET_DEVICE + 1,
 	.name = WG_GENL_NAME,
 	.version = WG_GENL_VERSION,
 	.maxattr = WGDEVICE_A_MAX,
 	.module = THIS_MODULE,
-#ifndef COMPAT_CANNOT_INDIVIDUAL_NETLINK_OPS_POLICY
 	.policy = device_policy,
-#endif
 	.netnsok = true
 };
 

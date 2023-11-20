@@ -131,7 +131,7 @@
 #ifndef _WG_UAPI_WIREGUARD_H
 #define _WG_UAPI_WIREGUARD_H
 
-#define WG_GENL_NAME "wireguard"
+#define WG_GENL_NAME "amnezia"
 #define WG_GENL_VERSION 1
 
 #define WG_KEY_LEN 32
@@ -157,6 +157,15 @@ enum wgdevice_attribute {
 	WGDEVICE_A_LISTEN_PORT,
 	WGDEVICE_A_FWMARK,
 	WGDEVICE_A_PEERS,
+    WGDEVICE_A_JC,
+    WGDEVICE_A_JMIN,
+    WGDEVICE_A_JMAX,
+    WGDEVICE_A_S1,
+    WGDEVICE_A_S2,
+    WGDEVICE_A_H1,
+    WGDEVICE_A_H2,
+    WGDEVICE_A_H3,
+    WGDEVICE_A_H4,
 	__WGDEVICE_A_LAST
 };
 #define WGDEVICE_A_MAX (__WGDEVICE_A_LAST - 1)
