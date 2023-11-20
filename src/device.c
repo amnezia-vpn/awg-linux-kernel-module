@@ -154,10 +154,10 @@ static netdev_tx_t wg_xmit(struct sk_buff *skb, struct net_device *dev)
 		ret = -ENOKEY;
 		if (skb->protocol == htons(ETH_P_IP))
 			net_dbg_ratelimited("%s: No peer has allowed IPs matching %pI4\n",
-						dev->name, &ip_hdr(skb)->daddr);
+					    dev->name, &ip_hdr(skb)->daddr);
 		else if (skb->protocol == htons(ETH_P_IPV6))
 			net_dbg_ratelimited("%s: No peer has allowed IPs matching %pI6\n",
-						dev->name, &ipv6_hdr(skb)->daddr);
+					    dev->name, &ipv6_hdr(skb)->daddr);
 		goto err_icmp;
 	}
 
@@ -165,7 +165,7 @@ static netdev_tx_t wg_xmit(struct sk_buff *skb, struct net_device *dev)
 	if (unlikely(family != AF_INET && family != AF_INET6)) {
 		ret = -EDESTADDRREQ;
 		net_dbg_ratelimited("%s: No valid endpoint has been configured or discovered for peer %llu\n",
-					dev->name, peer->internal_id);
+				    dev->name, peer->internal_id);
 		goto err_peer;
 	}
 
@@ -276,10 +276,10 @@ static void wg_setup(struct net_device *dev)
 {
 	struct wg_device *wg = netdev_priv(dev);
 	enum { WG_NETDEV_FEATURES = NETIF_F_HW_CSUM | NETIF_F_RXCSUM |
-					NETIF_F_SG | NETIF_F_GSO |
-					NETIF_F_GSO_SOFTWARE | NETIF_F_HIGHDMA };
+				    NETIF_F_SG | NETIF_F_GSO |
+				    NETIF_F_GSO_SOFTWARE | NETIF_F_HIGHDMA };
 	const int overhead = MESSAGE_MINIMUM_LENGTH + sizeof(struct udphdr) +
-				 max(sizeof(struct ipv6hdr), sizeof(struct iphdr));
+			     max(sizeof(struct ipv6hdr), sizeof(struct iphdr));
 
 	dev->netdev_ops = &netdev_ops;
 	dev->header_ops = &ip_tunnel_header_ops;
@@ -307,8 +307,8 @@ static void wg_setup(struct net_device *dev)
 }
 
 static int wg_newlink(struct net *src_net, struct net_device *dev,
-			  struct nlattr *tb[], struct nlattr *data[],
-			  struct netlink_ext_ack *extack)
+		      struct nlattr *tb[], struct nlattr *data[],
+		      struct netlink_ext_ack *extack)
 {
 	struct wg_device *wg = netdev_priv(dev);
 	int ret = -ENOMEM;

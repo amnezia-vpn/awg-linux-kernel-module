@@ -67,14 +67,14 @@ static struct wg_device *lookup_interface(struct nlattr **attrs,
 		return ERR_PTR(-EBADR);
 	if (attrs[WGDEVICE_A_IFINDEX])
 		dev = dev_get_by_index(sock_net(skb->sk),
-					   nla_get_u32(attrs[WGDEVICE_A_IFINDEX]));
+				       nla_get_u32(attrs[WGDEVICE_A_IFINDEX]));
 	else if (attrs[WGDEVICE_A_IFNAME])
 		dev = dev_get_by_name(sock_net(skb->sk),
-					  nla_data(attrs[WGDEVICE_A_IFNAME]));
+				      nla_data(attrs[WGDEVICE_A_IFNAME]));
 	if (!dev)
 		return ERR_PTR(-ENODEV);
 	if (!dev->rtnl_link_ops || !dev->rtnl_link_ops->kind ||
-		strcmp(dev->rtnl_link_ops->kind, KBUILD_MODNAME)) {
+	    strcmp(dev->rtnl_link_ops->kind, KBUILD_MODNAME)) {
 		dev_put(dev);
 		return ERR_PTR(-EOPNOTSUPP);
 	}
@@ -91,9 +91,9 @@ static int get_allowedips(struct sk_buff *skb, const u8 *ip, u8 cidr,
 		return -EMSGSIZE;
 
 	if (nla_put_u8(skb, WGALLOWEDIP_A_CIDR_MASK, cidr) ||
-		nla_put_u16(skb, WGALLOWEDIP_A_FAMILY, family) ||
-		nla_put(skb, WGALLOWEDIP_A_IPADDR, family == AF_INET6 ?
-			sizeof(struct in6_addr) : sizeof(struct in_addr), ip)) {
+	    nla_put_u16(skb, WGALLOWEDIP_A_FAMILY, family) ||
+	    nla_put(skb, WGALLOWEDIP_A_IPADDR, family == AF_INET6 ?
+		    sizeof(struct in6_addr) : sizeof(struct in_addr), ip)) {
 		nla_nest_cancel(skb, allowedip_nest);
 		return -EMSGSIZE;
 	}
@@ -124,7 +124,7 @@ get_peer(struct wg_peer *peer, struct sk_buff *skb, struct dump_ctx *ctx)
 
 	down_read(&peer->handshake.lock);
 	fail = nla_put(skb, WGPEER_A_PUBLIC_KEY, NOISE_PUBLIC_KEY_LEN,
-			   peer->handshake.remote_static);
+		       peer->handshake.remote_static);
 	up_read(&peer->handshake.lock);
 	if (fail)
 		goto err;
@@ -137,32 +137,32 @@ get_peer(struct wg_peer *peer, struct sk_buff *skb, struct dump_ctx *ctx)
 
 		down_read(&peer->handshake.lock);
 		fail = nla_put(skb, WGPEER_A_PRESHARED_KEY,
-				   NOISE_SYMMETRIC_KEY_LEN,
-				   peer->handshake.preshared_key);
+			       NOISE_SYMMETRIC_KEY_LEN,
+			       peer->handshake.preshared_key);
 		up_read(&peer->handshake.lock);
 		if (fail)
 			goto err;
 
 		if (nla_put(skb, WGPEER_A_LAST_HANDSHAKE_TIME,
-				sizeof(last_handshake), &last_handshake) ||
-			nla_put_u16(skb, WGPEER_A_PERSISTENT_KEEPALIVE_INTERVAL,
+			    sizeof(last_handshake), &last_handshake) ||
+		    nla_put_u16(skb, WGPEER_A_PERSISTENT_KEEPALIVE_INTERVAL,
 				peer->persistent_keepalive_interval) ||
-			nla_put_u64_64bit(skb, WGPEER_A_TX_BYTES, peer->tx_bytes,
-					  WGPEER_A_UNSPEC) ||
-			nla_put_u64_64bit(skb, WGPEER_A_RX_BYTES, peer->rx_bytes,
-					  WGPEER_A_UNSPEC) ||
-			nla_put_u32(skb, WGPEER_A_PROTOCOL_VERSION, 1))
+		    nla_put_u64_64bit(skb, WGPEER_A_TX_BYTES, peer->tx_bytes,
+				      WGPEER_A_UNSPEC) ||
+		    nla_put_u64_64bit(skb, WGPEER_A_RX_BYTES, peer->rx_bytes,
+				      WGPEER_A_UNSPEC) ||
+		    nla_put_u32(skb, WGPEER_A_PROTOCOL_VERSION, 1))
 			goto err;
 
 		read_lock_bh(&peer->endpoint_lock);
 		if (peer->endpoint.addr.sa_family == AF_INET)
 			fail = nla_put(skb, WGPEER_A_ENDPOINT,
-					   sizeof(peer->endpoint.addr4),
-					   &peer->endpoint.addr4);
+				       sizeof(peer->endpoint.addr4),
+				       &peer->endpoint.addr4);
 		else if (peer->endpoint.addr.sa_family == AF_INET6)
 			fail = nla_put(skb, WGPEER_A_ENDPOINT,
-					   sizeof(peer->endpoint.addr6),
-					   &peer->endpoint.addr6);
+				       sizeof(peer->endpoint.addr6),
+				       &peer->endpoint.addr6);
 		read_unlock_bh(&peer->endpoint_lock);
 		if (fail)
 			goto err;
@@ -241,37 +241,37 @@ static int wg_get_device_dump(struct sk_buff *skb, struct netlink_callback *cb)
 	if (!ctx->next_peer) {
 		if (nla_put_u16(skb, WGDEVICE_A_LISTEN_PORT,
 				wg->incoming_port) ||
-			nla_put_u32(skb, WGDEVICE_A_FWMARK, wg->fwmark) ||
-			nla_put_u32(skb, WGDEVICE_A_IFINDEX, wg->dev->ifindex) ||
-			nla_put_string(skb, WGDEVICE_A_IFNAME, wg->dev->name) ||
-			nla_put_u16(skb, WGDEVICE_A_JC,
-						wg->advanced_security_config.junk_packet_count) ||
-			nla_put_u16(skb, WGDEVICE_A_JMIN,
-						wg->advanced_security_config.junk_packet_min_size) ||
-			nla_put_u16(skb, WGDEVICE_A_JMAX,
-						wg->advanced_security_config.junk_packet_max_size) ||
-			nla_put_u16(skb, WGDEVICE_A_S1,
-						wg->advanced_security_config.init_packet_junk_size) ||
-			nla_put_u16(skb, WGDEVICE_A_S2,
-						wg->advanced_security_config.response_packet_junk_size) ||
-			nla_put_u32(skb, WGDEVICE_A_H1,
-						wg->advanced_security_config.init_packet_magic_header) ||
-			nla_put_u32(skb, WGDEVICE_A_H2,
-						wg->advanced_security_config.response_packet_magic_header) ||
-			nla_put_u32(skb, WGDEVICE_A_H3,
-						wg->advanced_security_config.underload_packet_magic_header) ||
-			nla_put_u32(skb, WGDEVICE_A_H4,
-						wg->advanced_security_config.transport_packet_magic_header))
+		    nla_put_u32(skb, WGDEVICE_A_FWMARK, wg->fwmark) ||
+		    nla_put_u32(skb, WGDEVICE_A_IFINDEX, wg->dev->ifindex) ||
+		    nla_put_string(skb, WGDEVICE_A_IFNAME, wg->dev->name) ||
+		    nla_put_u16(skb, WGDEVICE_A_JC,
+					    wg->advanced_security_config.junk_packet_count) ||
+		    nla_put_u16(skb, WGDEVICE_A_JMIN,
+					    wg->advanced_security_config.junk_packet_min_size) ||
+		    nla_put_u16(skb, WGDEVICE_A_JMAX,
+					    wg->advanced_security_config.junk_packet_max_size) ||
+		    nla_put_u16(skb, WGDEVICE_A_S1,
+					    wg->advanced_security_config.init_packet_junk_size) ||
+		    nla_put_u16(skb, WGDEVICE_A_S2,
+					    wg->advanced_security_config.response_packet_junk_size) ||
+		    nla_put_u32(skb, WGDEVICE_A_H1,
+					    wg->advanced_security_config.init_packet_magic_header) ||
+		    nla_put_u32(skb, WGDEVICE_A_H2,
+					    wg->advanced_security_config.response_packet_magic_header) ||
+		    nla_put_u32(skb, WGDEVICE_A_H3,
+					    wg->advanced_security_config.underload_packet_magic_header) ||
+		    nla_put_u32(skb, WGDEVICE_A_H4,
+					    wg->advanced_security_config.transport_packet_magic_header))
 			goto out;
 
 		down_read(&wg->static_identity.lock);
 		if (wg->static_identity.has_identity) {
 			if (nla_put(skb, WGDEVICE_A_PRIVATE_KEY,
-					NOISE_PUBLIC_KEY_LEN,
-					wg->static_identity.static_private) ||
-				nla_put(skb, WGDEVICE_A_PUBLIC_KEY,
-					NOISE_PUBLIC_KEY_LEN,
-					wg->static_identity.static_public)) {
+				    NOISE_PUBLIC_KEY_LEN,
+				    wg->static_identity.static_private) ||
+			    nla_put(skb, WGDEVICE_A_PUBLIC_KEY,
+				    NOISE_PUBLIC_KEY_LEN,
+				    wg->static_identity.static_public)) {
 				up_read(&wg->static_identity.lock);
 				goto out;
 			}
@@ -289,7 +289,7 @@ static int wg_get_device_dump(struct sk_buff *skb, struct netlink_callback *cb)
 	 * coherent dump anyway, so they'll try again.
 	 */
 	if (list_empty(&wg->peer_list) ||
-		(ctx->next_peer && list_empty(&ctx->next_peer->peer_list))) {
+	    (ctx->next_peer && list_empty(&ctx->next_peer->peer_list))) {
 		nla_nest_cancel(skb, peers_nest);
 		goto out;
 	}
@@ -362,13 +362,13 @@ static int set_allowedip(struct wg_peer *peer, struct nlattr **attrs)
 	u8 cidr;
 
 	if (!attrs[WGALLOWEDIP_A_FAMILY] || !attrs[WGALLOWEDIP_A_IPADDR] ||
-		!attrs[WGALLOWEDIP_A_CIDR_MASK])
+	    !attrs[WGALLOWEDIP_A_CIDR_MASK])
 		return ret;
 	family = nla_get_u16(attrs[WGALLOWEDIP_A_FAMILY]);
 	cidr = nla_get_u8(attrs[WGALLOWEDIP_A_CIDR_MASK]);
 
 	if (family == AF_INET && cidr <= 32 &&
-		nla_len(attrs[WGALLOWEDIP_A_IPADDR]) == sizeof(struct in_addr))
+	    nla_len(attrs[WGALLOWEDIP_A_IPADDR]) == sizeof(struct in_addr))
 		ret = wg_allowedips_insert_v4(
 			&peer->device->peer_allowedips,
 			nla_data(attrs[WGALLOWEDIP_A_IPADDR]), cidr, peer,
@@ -392,12 +392,12 @@ static int set_peer(struct wg_device *wg, struct nlattr **attrs)
 
 	ret = -EINVAL;
 	if (attrs[WGPEER_A_PUBLIC_KEY] &&
-		nla_len(attrs[WGPEER_A_PUBLIC_KEY]) == NOISE_PUBLIC_KEY_LEN)
+	    nla_len(attrs[WGPEER_A_PUBLIC_KEY]) == NOISE_PUBLIC_KEY_LEN)
 		public_key = nla_data(attrs[WGPEER_A_PUBLIC_KEY]);
 	else
 		goto out;
 	if (attrs[WGPEER_A_PRESHARED_KEY] &&
-		nla_len(attrs[WGPEER_A_PRESHARED_KEY]) == NOISE_SYMMETRIC_KEY_LEN)
+	    nla_len(attrs[WGPEER_A_PRESHARED_KEY]) == NOISE_SYMMETRIC_KEY_LEN)
 		preshared_key = nla_data(attrs[WGPEER_A_PRESHARED_KEY]);
 
 	if (attrs[WGPEER_A_FLAGS])
@@ -424,9 +424,9 @@ static int set_peer(struct wg_device *wg, struct nlattr **attrs)
 
 		down_read(&wg->static_identity.lock);
 		if (wg->static_identity.has_identity &&
-			!memcmp(nla_data(attrs[WGPEER_A_PUBLIC_KEY]),
-				wg->static_identity.static_public,
-				NOISE_PUBLIC_KEY_LEN)) {
+		    !memcmp(nla_data(attrs[WGPEER_A_PUBLIC_KEY]),
+			    wg->static_identity.static_public,
+			    NOISE_PUBLIC_KEY_LEN)) {
 			/* We silently ignore peers that have the same public
 			 * key as the device. The reason we do it silently is
 			 * that we'd like for people to be able to reuse the
@@ -458,7 +458,7 @@ static int set_peer(struct wg_device *wg, struct nlattr **attrs)
 	if (preshared_key) {
 		down_write(&peer->handshake.lock);
 		memcpy(&peer->handshake.preshared_key, preshared_key,
-			   NOISE_SYMMETRIC_KEY_LEN);
+		       NOISE_SYMMETRIC_KEY_LEN);
 		up_write(&peer->handshake.lock);
 	}
 
@@ -478,7 +478,7 @@ static int set_peer(struct wg_device *wg, struct nlattr **attrs)
 
 	if (flags & WGPEER_F_REPLACE_ALLOWEDIPS)
 		wg_allowedips_remove_by_peer(&wg->peer_allowedips, peer,
-						 &wg->device_update_lock);
+					     &wg->device_update_lock);
 
 	if (attrs[WGPEER_A_ALLOWEDIPS]) {
 		struct nlattr *attr, *allowedip[WGALLOWEDIP_A_MAX + 1];
@@ -486,7 +486,7 @@ static int set_peer(struct wg_device *wg, struct nlattr **attrs)
 
 		nla_for_each_nested(attr, attrs[WGPEER_A_ALLOWEDIPS], rem) {
 			ret = nla_parse_nested(allowedip, WGALLOWEDIP_A_MAX,
-						   attr, allowedip_policy, NULL);
+					       attr, allowedip_policy, NULL);
 			if (ret < 0)
 				goto out;
 			ret = set_allowedip(peer, allowedip);
@@ -616,8 +616,8 @@ static int wg_set_device(struct sk_buff *skb, struct genl_info *info)
 		wg_peer_remove_all(wg);
 
 	if (info->attrs[WGDEVICE_A_PRIVATE_KEY] &&
-		nla_len(info->attrs[WGDEVICE_A_PRIVATE_KEY]) ==
-			NOISE_PUBLIC_KEY_LEN) {
+	    nla_len(info->attrs[WGDEVICE_A_PRIVATE_KEY]) ==
+		    NOISE_PUBLIC_KEY_LEN) {
 		u8 *private_key = nla_data(info->attrs[WGDEVICE_A_PRIVATE_KEY]);
 		u8 public_key[NOISE_PUBLIC_KEY_LEN];
 		struct wg_peer *peer, *temp;
@@ -661,7 +661,7 @@ skip_set_private_key:
 
 		nla_for_each_nested(attr, info->attrs[WGDEVICE_A_PEERS], rem) {
 			ret = nla_parse_nested(peer, WGPEER_A_MAX, attr,
-						   peer_policy, NULL);
+					       peer_policy, NULL);
 			if (ret < 0)
 				goto out;
 			ret = set_peer(wg, peer);
