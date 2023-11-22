@@ -478,7 +478,6 @@ void wg_device_uninit(void)
 	rcu_barrier();
 }
 
-// TODO: cleanup hardcoded constants in this func
 void wg_device_handle_post_config(struct net_device *dev, struct amnezia_config *asc)
 {
 	struct wg_device *wg = netdev_priv(dev);
@@ -504,7 +503,7 @@ void wg_device_handle_post_config(struct net_device *dev, struct amnezia_config 
 	if (asc->junk_packet_count > 0 && asc->junk_packet_min_size == asc->junk_packet_max_size)
 		asc->junk_packet_max_size++;
 
-	if (asc->junk_packet_max_size >= 65535) {
+	if (asc->junk_packet_max_size >= MESSAGE_MAX_SIZE) {
 		wg->advanced_security_config.junk_packet_min_size = 0;
 		wg->advanced_security_config.junk_packet_max_size = 1;
 
@@ -517,7 +516,7 @@ void wg_device_handle_post_config(struct net_device *dev, struct amnezia_config 
 	if (asc->junk_packet_max_size != 0)
 		a_sec_on = true;
 
-	if (asc->init_packet_junk_size + 148 >= 65535) {
+	if (asc->init_packet_junk_size + MESSAGE_INITIATION_SIZE >= MESSAGE_MAX_SIZE) {
 		// TODO error
 	} else
 		wg->advanced_security_config.init_packet_junk_size = asc->init_packet_junk_size;
@@ -525,7 +524,7 @@ void wg_device_handle_post_config(struct net_device *dev, struct amnezia_config 
 	if (asc->init_packet_junk_size != 0)
 		a_sec_on = true;
 
-	if (asc->response_packet_junk_size + 92 >= 65535) {
+	if (asc->response_packet_junk_size + MESSAGE_RESPONSE_SIZE >= MESSAGE_MAX_SIZE) {
 		// TODO error
 	} else
 		wg->advanced_security_config.response_packet_junk_size = asc->response_packet_junk_size;
@@ -533,24 +532,32 @@ void wg_device_handle_post_config(struct net_device *dev, struct amnezia_config 
 	if (asc->response_packet_junk_size != 0)
 		a_sec_on = true;
 
-	if (asc->init_packet_magic_header > 4) {
+	if (asc->init_packet_magic_header > MESSAGE_DATA) {
 		a_sec_on = true;
 		wg->advanced_security_config.init_packet_magic_header = asc->init_packet_magic_header;
+	} else {
+		wg->advanced_security_config.init_packet_magic_header = cpu_to_le32(MESSAGE_HANDSHAKE_INITIATION);
 	}
 
-	if (asc->response_packet_magic_header > 4) {
+	if (asc->response_packet_magic_header > MESSAGE_DATA) {
 		a_sec_on = true;
 		wg->advanced_security_config.response_packet_magic_header = asc->response_packet_magic_header;
+	} else {
+		wg->advanced_security_config.response_packet_magic_header = cpu_to_le32(MESSAGE_HANDSHAKE_RESPONSE);
 	}
 
-	if (asc->underload_packet_magic_header > 4) {
+	if (asc->cookie_packet_magic_header > MESSAGE_DATA) {
 		a_sec_on = true;
-		wg->advanced_security_config.underload_packet_magic_header = asc->underload_packet_magic_header;
+		wg->advanced_security_config.cookie_packet_magic_header = asc->cookie_packet_magic_header;
+	} else {
+		wg->advanced_security_config.cookie_packet_magic_header = cpu_to_le32(MESSAGE_HANDSHAKE_COOKIE);
 	}
 
-	if (asc->transport_packet_magic_header > 4) {
+	if (asc->transport_packet_magic_header > MESSAGE_DATA) {
 		a_sec_on = true;
 		wg->advanced_security_config.transport_packet_magic_header = asc->transport_packet_magic_header;
+	} else {
+		wg->advanced_security_config.transport_packet_magic_header = cpu_to_le32(MESSAGE_DATA);
 	}
 
 	wg->advanced_security_config.advanced_security_enabled = a_sec_on;

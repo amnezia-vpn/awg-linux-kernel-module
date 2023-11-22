@@ -46,7 +46,7 @@ struct amnezia_config {
 	u16 response_packet_junk_size;
 	u32 init_packet_magic_header;
 	u32 response_packet_magic_header;
-	u32 underload_packet_magic_header;
+	u32 cookie_packet_magic_header;
 	u32 transport_packet_magic_header;
 };
 

@@ -117,6 +117,14 @@ enum message_alignments {
 	MESSAGE_MINIMUM_LENGTH = message_data_len(0)
 };
 
+enum message_size {
+	MESSAGE_INITIATION_SIZE = sizeof(struct message_handshake_initiation),
+	MESSAGE_RESPONSE_SIZE = sizeof(struct message_handshake_response),
+	MESSAGE_COOKIE_REPLY_SIZE = sizeof(struct message_handshake_cookie),
+	MESSAGE_TRANSPORT_SIZE = MESSAGE_MINIMUM_LENGTH,
+	MESSAGE_MAX_SIZE = 65535
+};
+
 #define SKB_HEADER_LEN                                       \
 	(max(sizeof(struct iphdr), sizeof(struct ipv6hdr)) + \
 	 sizeof(struct udphdr) + NET_SKB_PAD)

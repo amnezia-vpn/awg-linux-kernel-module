@@ -228,7 +228,7 @@ static int wg_get_device_dump(struct sk_buff *skb, struct netlink_callback *cb)
 
 	rtnl_lock();
 	mutex_lock(&wg->device_update_lock);
-	mutex_lock(&wg->advanced_security_config);
+	mutex_lock(&wg->security_config_lock);
 	cb->seq = wg->device_update_gen;
 	next_peer_cursor = ctx->next_peer;
 
@@ -259,7 +259,7 @@ static int wg_get_device_dump(struct sk_buff *skb, struct netlink_callback *cb)
 		    nla_put_u32(skb, WGDEVICE_A_H2,
 					    wg->advanced_security_config.response_packet_magic_header) ||
 		    nla_put_u32(skb, WGDEVICE_A_H3,
-					    wg->advanced_security_config.underload_packet_magic_header) ||
+					    wg->advanced_security_config.cookie_packet_magic_header) ||
 		    nla_put_u32(skb, WGDEVICE_A_H4,
 					    wg->advanced_security_config.transport_packet_magic_header))
 			goto out;
@@ -309,7 +309,7 @@ out:
 		wg_peer_get(next_peer_cursor);
 	wg_peer_put(ctx->next_peer);
 	mutex_unlock(&wg->device_update_lock);
-	mutex_unlock(&wg->advanced_security_config);
+	mutex_unlock(&wg->security_config_lock);
 	rtnl_unlock();
 
 	if (ret) {
@@ -604,7 +604,7 @@ static int wg_set_device(struct sk_buff *skb, struct genl_info *info)
 
 	if (info->attrs[WGDEVICE_A_H3]) {
 		asc->advanced_security_enabled = true;
-		asc->underload_packet_magic_header = nla_get_u32(info->attrs[WGDEVICE_A_H3]);
+		asc->cookie_packet_magic_header = nla_get_u32(info->attrs[WGDEVICE_A_H3]);
 	}
 
 	if (info->attrs[WGDEVICE_A_H4]) {
