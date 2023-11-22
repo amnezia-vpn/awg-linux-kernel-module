@@ -70,8 +70,8 @@ void prepare_advanced_secured_message(struct sk_buff *skb, struct wg_device *wg)
 			assumed_type = wg->advanced_security_config.init_packet_magic_header;
 			assumed_offset = wg->advanced_security_config.init_packet_junk_size;
 		} else if (skb->data_len == MESSAGE_RESPONSE_SIZE + wg->advanced_security_config.response_packet_junk_size) {
-			assumed_type = wg->advanced_security_config.init_packet_magic_header;
-			assumed_offset = wg->advanced_security_config.response_packet_magic_header;
+			assumed_type = wg->advanced_security_config.response_packet_magic_header;
+			assumed_offset = wg->advanced_security_config.response_packet_junk_size;
 		} else goto out;
 
 		if (assumed_offset > 0 && !unlikely(!pskb_may_pull(skb, assumed_offset))) {
