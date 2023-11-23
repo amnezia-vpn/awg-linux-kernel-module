@@ -128,7 +128,7 @@ static void wg_receive_handshake_packet(struct wg_device *wg,
 	bool packet_needs_cookie;
 	bool under_load;
 
-	if (SKB_TYPE_LE32(skb) == wg->advanced_security_config.cookie_packet_magic_header) {
+	if (SKB_TYPE_LE32(skb) == cpu_to_le32(wg->advanced_security_config.cookie_packet_magic_header)) {
 		net_dbg_skb_ratelimited("%s: Receiving cookie response from %pISpfsc\n",
 					wg->dev->name, skb);
 		wg_cookie_message_consume(
@@ -569,7 +569,7 @@ void wg_packet_receive(struct wg_device *wg, struct sk_buff *skb)
 
 	if (SKB_TYPE_LE32(skb) == cpu_to_le32(wg->advanced_security_config.init_packet_magic_header) ||
 	    SKB_TYPE_LE32(skb) == cpu_to_le32(wg->advanced_security_config.response_packet_magic_header) ||
-		SKB_TYPE_LE32(skb) == cpu_to_le32(wg->advanced_security_config.cookie_packet_magic_header)) {
+	    SKB_TYPE_LE32(skb) == cpu_to_le32(wg->advanced_security_config.cookie_packet_magic_header)) {
 		int cpu, ret = -EBUSY;
 
 		if (unlikely(!rng_is_initialized()))

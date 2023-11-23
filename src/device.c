@@ -482,6 +482,12 @@ void wg_device_handle_post_config(struct net_device *dev, struct amnezia_config 
 	struct wg_device *wg = netdev_priv(dev);
 	bool a_sec_on = false;
 
+	wg->advanced_security_config.advanced_security_enabled = false;
+	wg->advanced_security_config.init_packet_magic_header = MESSAGE_HANDSHAKE_INITIATION;
+	wg->advanced_security_config.response_packet_magic_header = MESSAGE_HANDSHAKE_RESPONSE;
+	wg->advanced_security_config.cookie_packet_magic_header = MESSAGE_HANDSHAKE_COOKIE;
+	wg->advanced_security_config.transport_packet_magic_header = MESSAGE_DATA;
+
 	if (!asc->advanced_security_enabled)
 		return;
 
