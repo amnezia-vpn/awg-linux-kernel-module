@@ -23,6 +23,7 @@ static void wg_packet_send_handshake_initiation(struct wg_peer *peer)
 	struct message_handshake_initiation packet;
 	struct wg_device *wg = peer->device;
 	void *buffer;
+	u8 ds;
 	u16 junk_packet_count, junk_packet_size;
 
 	if (!wg_birthdate_has_expired(atomic64_read(&peer->last_sent_handshake),
@@ -44,7 +45,8 @@ static void wg_packet_send_handshake_initiation(struct wg_peer *peer)
 					wg->advanced_security_config.junk_packet_max_size);
 
 			get_random_bytes(buffer, junk_packet_size);
-			wg_socket_send_buffer_to_peer(peer, buffer, junk_packet_size, HANDSHAKE_DSCP);
+			get_random_bytes(&ds, 1);
+			wg_socket_send_buffer_to_peer(peer, buffer, junk_packet_size, ds);
 		}
 
 		kfree(buffer);
