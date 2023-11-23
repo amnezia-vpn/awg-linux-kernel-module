@@ -533,28 +533,28 @@ void wg_device_handle_post_config(struct net_device *dev, struct amnezia_config 
 		a_sec_on = true;
 		wg->advanced_security_config.init_packet_magic_header = asc->init_packet_magic_header;
 	} else {
-		wg->advanced_security_config.init_packet_magic_header = cpu_to_le32(MESSAGE_HANDSHAKE_INITIATION);
+		wg->advanced_security_config.init_packet_magic_header = MESSAGE_HANDSHAKE_INITIATION;
 	}
 
 	if (asc->response_packet_magic_header > MESSAGE_DATA) {
 		a_sec_on = true;
 		wg->advanced_security_config.response_packet_magic_header = asc->response_packet_magic_header;
 	} else {
-		wg->advanced_security_config.response_packet_magic_header = cpu_to_le32(MESSAGE_HANDSHAKE_RESPONSE);
+		wg->advanced_security_config.response_packet_magic_header = MESSAGE_HANDSHAKE_RESPONSE;
 	}
 
 	if (asc->cookie_packet_magic_header > MESSAGE_DATA) {
 		a_sec_on = true;
 		wg->advanced_security_config.cookie_packet_magic_header = asc->cookie_packet_magic_header;
 	} else {
-		wg->advanced_security_config.cookie_packet_magic_header = cpu_to_le32(MESSAGE_HANDSHAKE_COOKIE);
+		wg->advanced_security_config.cookie_packet_magic_header = MESSAGE_HANDSHAKE_COOKIE;
 	}
 
 	if (asc->transport_packet_magic_header > MESSAGE_DATA) {
 		a_sec_on = true;
 		wg->advanced_security_config.transport_packet_magic_header = asc->transport_packet_magic_header;
 	} else {
-		wg->advanced_security_config.transport_packet_magic_header = cpu_to_le32(MESSAGE_DATA);
+		wg->advanced_security_config.transport_packet_magic_header = MESSAGE_DATA;
 	}
 
 	wg->advanced_security_config.advanced_security_enabled = a_sec_on;

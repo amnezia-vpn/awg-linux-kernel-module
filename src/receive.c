@@ -29,16 +29,16 @@ static size_t validate_header_len(struct sk_buff *skb, struct wg_device *wg)
 {
 	if (unlikely(skb->len < sizeof(struct message_header)))
 		return 0;
-	if (SKB_TYPE_LE32(skb) == wg->advanced_security_config.transport_packet_magic_header &&
+	if (SKB_TYPE_LE32(skb) == cpu_to_le32(wg->advanced_security_config.transport_packet_magic_header) &&
 	    skb->len >= MESSAGE_MINIMUM_LENGTH)
 		return sizeof(struct message_data);
-	if (SKB_TYPE_LE32(skb) == wg->advanced_security_config.init_packet_magic_header &&
+	if (SKB_TYPE_LE32(skb) == cpu_to_le32(wg->advanced_security_config.init_packet_magic_header) &&
 	    skb->len == MESSAGE_INITIATION_SIZE)
 		return MESSAGE_INITIATION_SIZE;
-	if (SKB_TYPE_LE32(skb) == wg->advanced_security_config.response_packet_magic_header &&
+	if (SKB_TYPE_LE32(skb) == cpu_to_le32(wg->advanced_security_config.response_packet_magic_header) &&
 	    skb->len == MESSAGE_RESPONSE_SIZE)
 		return MESSAGE_RESPONSE_SIZE;
-	if (SKB_TYPE_LE32(skb) == wg->advanced_security_config.cookie_packet_magic_header &&
+	if (SKB_TYPE_LE32(skb) == cpu_to_le32(wg->advanced_security_config.cookie_packet_magic_header) &&
 	    skb->len == MESSAGE_COOKIE_REPLY_SIZE)
 		return MESSAGE_COOKIE_REPLY_SIZE;
 	return 0;
@@ -51,10 +51,10 @@ void prepare_advanced_secured_message(struct sk_buff *skb, struct wg_device *wg)
 
 	if (wg->advanced_security_config.advanced_security_enabled) {
 		if (skb->len == MESSAGE_INITIATION_SIZE + wg->advanced_security_config.init_packet_junk_size) {
-			assumed_type = wg->advanced_security_config.init_packet_magic_header;
+			assumed_type = cpu_to_le32(wg->advanced_security_config.init_packet_magic_header);
 			assumed_offset = wg->advanced_security_config.init_packet_junk_size;
 		} else if (skb->len == MESSAGE_RESPONSE_SIZE + wg->advanced_security_config.response_packet_junk_size) {
-			assumed_type = wg->advanced_security_config.response_packet_magic_header;
+			assumed_type = cpu_to_le32(wg->advanced_security_config.response_packet_magic_header);
 			assumed_offset = wg->advanced_security_config.response_packet_junk_size;
 		} else
 			return;
@@ -158,7 +158,7 @@ static void wg_receive_handshake_packet(struct wg_device *wg,
 		return;
 	}
 
-	if (SKB_TYPE_LE32(skb) == wg->advanced_security_config.init_packet_magic_header) {
+	if (SKB_TYPE_LE32(skb) == cpu_to_le32(wg->advanced_security_config.init_packet_magic_header)) {
 		struct message_handshake_initiation *message =
 			(struct message_handshake_initiation *)skb->data;
 
@@ -179,7 +179,7 @@ static void wg_receive_handshake_packet(struct wg_device *wg,
 				    &peer->endpoint.addr);
 		wg_packet_send_handshake_response(peer);
 	}
-	if (SKB_TYPE_LE32(skb) == wg->advanced_security_config.response_packet_magic_header) {
+	if (SKB_TYPE_LE32(skb) == cpu_to_le32(wg->advanced_security_config.response_packet_magic_header)) {
 		struct message_handshake_response *message =
 			(struct message_handshake_response *)skb->data;
 
@@ -567,9 +567,9 @@ void wg_packet_receive(struct wg_device *wg, struct sk_buff *skb)
 	if (unlikely(prepare_skb_header(skb, wg) < 0))
 		goto err;
 
-	if (SKB_TYPE_LE32(skb) == wg->advanced_security_config.init_packet_magic_header ||
-	    SKB_TYPE_LE32(skb) == wg->advanced_security_config.response_packet_magic_header ||
-		SKB_TYPE_LE32(skb) == wg->advanced_security_config.cookie_packet_magic_header) {
+	if (SKB_TYPE_LE32(skb) == cpu_to_le32(wg->advanced_security_config.init_packet_magic_header) ||
+	    SKB_TYPE_LE32(skb) == cpu_to_le32(wg->advanced_security_config.response_packet_magic_header) ||
+		SKB_TYPE_LE32(skb) == cpu_to_le32(wg->advanced_security_config.cookie_packet_magic_header)) {
 		int cpu, ret = -EBUSY;
 
 		if (unlikely(!rng_is_initialized()))
@@ -592,7 +592,7 @@ drop:
 		/* Queues up a call to packet_process_queued_handshake_packets(skb): */
 		queue_work_on(cpu, wg->handshake_receive_wq,
 		              &per_cpu_ptr(wg->handshake_queue.worker, cpu)->work);
-	} else if (SKB_TYPE_LE32(skb) == wg->advanced_security_config.transport_packet_magic_header) {
+	} else if (SKB_TYPE_LE32(skb) == cpu_to_le32(wg->advanced_security_config.transport_packet_magic_header)) {
 		PACKET_CB(skb)->ds = ip_tunnel_get_dsfield(ip_hdr(skb), skb);
 		wg_packet_consume_data(wg, skb);
 	} else {

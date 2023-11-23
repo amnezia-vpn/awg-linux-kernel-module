@@ -236,7 +236,7 @@ static bool encrypt_packet(struct sk_buff *skb, struct noise_keypair *keypair, s
 	 */
 	skb_set_inner_network_header(skb, 0);
 	header = (struct message_data *)skb_push(skb, sizeof(*header));
-	header->header.type = asc->transport_packet_magic_header;
+	header->header.type = cpu_to_le32(asc->transport_packet_magic_header);
 	header->key_idx = keypair->remote_index;
 	header->counter = cpu_to_le64(PACKET_CB(skb)->nonce);
 	pskb_put(skb, trailer, trailer_len);
