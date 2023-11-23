@@ -21,6 +21,9 @@
 static void wg_packet_send_handshake_initiation(struct wg_peer *peer)
 {
 	struct message_handshake_initiation packet;
+	struct wg_device *wg = peer->device;
+	void *buffer;
+	u16 junk_packet_count, junk_packet_size;
 
 	if (!wg_birthdate_has_expired(atomic64_read(&peer->last_sent_handshake),
 				      REKEY_TIMEOUT))
@@ -31,14 +34,36 @@ static void wg_packet_send_handshake_initiation(struct wg_peer *peer)
 			    peer->device->dev->name, peer->internal_id,
 			    &peer->endpoint.addr);
 
-	if (wg_noise_handshake_create_initiation(&packet, &peer->handshake)) {
+	if (wg->advanced_security_config.advanced_security_enabled) {
+		junk_packet_count = wg->advanced_security_config.junk_packet_count;
+		buffer = kzalloc(wg->advanced_security_config.junk_packet_max_size, GFP_KERNEL);
+
+		while (junk_packet_count-- > 0) {
+			junk_packet_size = (u16) get_random_u32_inclusive(
+					wg->advanced_security_config.junk_packet_min_size,
+					wg->advanced_security_config.junk_packet_max_size);
+
+			get_random_bytes(buffer, junk_packet_size);
+			wg_socket_send_buffer_to_peer(peer, buffer, junk_packet_size, HANDSHAKE_DSCP);
+		}
+
+		kfree(buffer);
+	}
+
+	if (wg_noise_handshake_create_initiation(&packet, &peer->handshake, wg->advanced_security_config.init_packet_magic_header)) {
 		wg_cookie_add_mac_to_packet(&packet, sizeof(packet), peer);
 		wg_timers_any_authenticated_packet_traversal(peer);
 		wg_timers_any_authenticated_packet_sent(peer);
 		atomic64_set(&peer->last_sent_handshake,
 			     ktime_get_coarse_boottime_ns());
-		wg_socket_send_buffer_to_peer(peer, &packet, sizeof(packet),
-					      HANDSHAKE_DSCP);
+
+		if (wg->advanced_security_config.advanced_security_enabled) {
+			wg_socket_send_junked_buffer_to_peer(peer, &packet, sizeof(packet),
+			                              HANDSHAKE_DSCP, wg->advanced_security_config.init_packet_junk_size);
+		} else {
+			wg_socket_send_buffer_to_peer(peer, &packet, sizeof(packet),
+			                              HANDSHAKE_DSCP);
+		}
 		wg_timers_handshake_initiated(peer);
 	}
 }
@@ -85,13 +110,14 @@ out:
 void wg_packet_send_handshake_response(struct wg_peer *peer)
 {
 	struct message_handshake_response packet;
+	struct wg_device *wg = peer->device;
 
 	atomic64_set(&peer->last_sent_handshake, ktime_get_coarse_boottime_ns());
 	net_dbg_ratelimited("%s: Sending handshake response to peer %llu (%pISpfsc)\n",
 			    peer->device->dev->name, peer->internal_id,
 			    &peer->endpoint.addr);
 
-	if (wg_noise_handshake_create_response(&packet, &peer->handshake)) {
+	if (wg_noise_handshake_create_response(&packet, &peer->handshake, wg->advanced_security_config.response_packet_magic_header)) {
 		wg_cookie_add_mac_to_packet(&packet, sizeof(packet), peer);
 		if (wg_noise_handshake_begin_session(&peer->handshake,
 						     &peer->keypairs)) {
@@ -100,9 +126,16 @@ void wg_packet_send_handshake_response(struct wg_peer *peer)
 			wg_timers_any_authenticated_packet_sent(peer);
 			atomic64_set(&peer->last_sent_handshake,
 				     ktime_get_coarse_boottime_ns());
-			wg_socket_send_buffer_to_peer(peer, &packet,
-						      sizeof(packet),
-						      HANDSHAKE_DSCP);
+			if (wg->advanced_security_config.advanced_security_enabled) {
+				wg_socket_send_junked_buffer_to_peer(peer, &packet,
+				                              sizeof(packet),
+				                              HANDSHAKE_DSCP,
+				                              wg->advanced_security_config.response_packet_junk_size);
+			} else {
+				wg_socket_send_buffer_to_peer(peer, &packet,
+							      sizeof(packet),
+							      HANDSHAKE_DSCP);
+			}
 		}
 	}
 }
@@ -116,7 +149,7 @@ void wg_packet_send_handshake_cookie(struct wg_device *wg,
 	net_dbg_skb_ratelimited("%s: Sending cookie response for denied handshake message for %pISpfsc\n",
 				wg->dev->name, initiating_skb);
 	wg_cookie_message_create(&packet, initiating_skb, sender_index,
-				 &wg->cookie_checker);
+				 &wg->cookie_checker, wg->advanced_security_config.cookie_packet_magic_header);
 	wg_socket_send_buffer_as_reply_to_skb(wg, initiating_skb, &packet,
 					      sizeof(packet));
 }
@@ -159,7 +192,7 @@ static unsigned int calculate_skb_padding(struct sk_buff *skb)
 	return padded_size - last_unit;
 }
 
-static bool encrypt_packet(struct sk_buff *skb, struct noise_keypair *keypair)
+static bool encrypt_packet(struct sk_buff *skb, struct noise_keypair *keypair, struct amnezia_config *asc)
 {
 	unsigned int padding_len, plaintext_len, trailer_len;
 	struct scatterlist sg[MAX_SKB_FRAGS + 8];
@@ -203,7 +236,7 @@ static bool encrypt_packet(struct sk_buff *skb, struct noise_keypair *keypair)
 	 */
 	skb_set_inner_network_header(skb, 0);
 	header = (struct message_data *)skb_push(skb, sizeof(*header));
-	header->header.type = cpu_to_le32(MESSAGE_DATA);
+	header->header.type = asc->transport_packet_magic_header;
 	header->key_idx = keypair->remote_index;
 	header->counter = cpu_to_le64(PACKET_CB(skb)->nonce);
 	pskb_put(skb, trailer, trailer_len);
@@ -289,13 +322,17 @@ void wg_packet_encrypt_worker(struct work_struct *work)
 	struct crypt_queue *queue = container_of(work, struct multicore_worker,
 						 work)->ptr;
 	struct sk_buff *first, *skb, *next;
+	struct wg_device *wg;
 
 	while ((first = ptr_ring_consume_bh(&queue->ring)) != NULL) {
 		enum packet_state state = PACKET_STATE_CRYPTED;
 
 		skb_list_walk_safe(first, skb, next) {
+			wg = PACKET_PEER(first)->device;
+
 			if (likely(encrypt_packet(skb,
-					PACKET_CB(first)->keypair))) {
+					PACKET_CB(first)->keypair,
+					&wg->advanced_security_config))) {
 				wg_reset_packet(skb, true);
 			} else {
 				state = PACKET_STATE_DEAD;

@@ -121,7 +121,7 @@ enum message_size {
 	MESSAGE_INITIATION_SIZE = sizeof(struct message_handshake_initiation),
 	MESSAGE_RESPONSE_SIZE = sizeof(struct message_handshake_response),
 	MESSAGE_COOKIE_REPLY_SIZE = sizeof(struct message_handshake_cookie),
-	MESSAGE_TRANSPORT_SIZE = MESSAGE_MINIMUM_LENGTH,
+	MESSAGE_TRANSPORT_SIZE = sizeof(struct message_data),
 	MESSAGE_MAX_SIZE = 65535
 };
 

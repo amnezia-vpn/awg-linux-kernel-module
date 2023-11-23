@@ -200,6 +200,18 @@ int wg_socket_send_buffer_to_peer(struct wg_peer *peer, void *buffer,
 	return wg_socket_send_skb_to_peer(peer, skb, ds);
 }
 
+int wg_socket_send_junked_buffer_to_peer(struct wg_peer *peer, void *buffer,
+                                          size_t len, u8 ds, u16 junk_size)
+{
+	int ret;
+	void *new_buffer = kzalloc(len + junk_size, GFP_KERNEL);
+	get_random_bytes(new_buffer, junk_size);
+	memcpy(new_buffer + junk_size, buffer, len);
+	ret = wg_socket_send_buffer_to_peer(peer, new_buffer, len + junk_size, ds);
+	kfree(new_buffer);
+	return ret;
+}
+
 int wg_socket_send_buffer_as_reply_to_skb(struct wg_device *wg,
 					  struct sk_buff *in_skb, void *buffer,
 					  size_t len)

@@ -317,7 +317,6 @@ static int wg_newlink(struct net *src_net, struct net_device *dev,
 	init_rwsem(&wg->static_identity.lock);
 	mutex_init(&wg->socket_update_lock);
 	mutex_init(&wg->device_update_lock);
-	mutex_init(&wg->security_config_lock);
 	wg_allowedips_init(&wg->peer_allowedips);
 	wg_cookie_checker_init(&wg->cookie_checker, wg);
 	INIT_LIST_HEAD(&wg->peer_list);
@@ -486,8 +485,6 @@ void wg_device_handle_post_config(struct net_device *dev, struct amnezia_config 
 	if (!asc->advanced_security_enabled)
 		return;
 
-	mutex_lock(&wg->security_config_lock);
-
 	if (asc->junk_packet_count < 0) {
 		// TODO error
 	}
@@ -561,6 +558,4 @@ void wg_device_handle_post_config(struct net_device *dev, struct amnezia_config 
 	}
 
 	wg->advanced_security_config.advanced_security_enabled = a_sec_on;
-
-	mutex_unlock(&wg->security_config_lock);
 }

@@ -228,7 +228,6 @@ static int wg_get_device_dump(struct sk_buff *skb, struct netlink_callback *cb)
 
 	rtnl_lock();
 	mutex_lock(&wg->device_update_lock);
-	mutex_lock(&wg->security_config_lock);
 	cb->seq = wg->device_update_gen;
 	next_peer_cursor = ctx->next_peer;
 
@@ -309,7 +308,6 @@ out:
 		wg_peer_get(next_peer_cursor);
 	wg_peer_put(ctx->next_peer);
 	mutex_unlock(&wg->device_update_lock);
-	mutex_unlock(&wg->security_config_lock);
 	rtnl_unlock();
 
 	if (ret) {
@@ -672,11 +670,11 @@ skip_set_private_key:
 	ret = 0;
 
 out:
+	wg_device_handle_post_config(wg->dev, asc);
 	mutex_unlock(&wg->device_update_lock);
 	rtnl_unlock();
 	dev_put(wg->dev);
 out_nodev:
-	wg_device_handle_post_config(wg->dev, asc);
 	kfree(asc);
 	if (info->attrs[WGDEVICE_A_PRIVATE_KEY])
 		memzero_explicit(nla_data(info->attrs[WGDEVICE_A_PRIVATE_KEY]),

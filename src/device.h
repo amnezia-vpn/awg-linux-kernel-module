@@ -61,7 +61,7 @@ struct wg_device {
 	struct pubkey_hashtable *peer_hashtable;
 	struct index_hashtable *index_hashtable;
 	struct allowedips peer_allowedips;
-	struct mutex device_update_lock, socket_update_lock, security_config_lock;
+	struct mutex device_update_lock, socket_update_lock;
 	struct list_head device_list, peer_list;
 	struct amnezia_config advanced_security_config;
 	atomic_t handshake_queue_len;

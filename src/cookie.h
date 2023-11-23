@@ -52,7 +52,7 @@ void wg_cookie_add_mac_to_packet(void *message, size_t len,
 
 void wg_cookie_message_create(struct message_handshake_cookie *src,
 			      struct sk_buff *skb, __le32 index,
-			      struct cookie_checker *checker);
+			      struct cookie_checker *checker, u32 message_type);
 void wg_cookie_message_consume(struct message_handshake_cookie *src,
 			       struct wg_device *wg);
 

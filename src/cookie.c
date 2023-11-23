@@ -179,13 +179,13 @@ void wg_cookie_add_mac_to_packet(void *message, size_t len,
 
 void wg_cookie_message_create(struct message_handshake_cookie *dst,
 			      struct sk_buff *skb, __le32 index,
-			      struct cookie_checker *checker)
+			      struct cookie_checker *checker, u32 message_type)
 {
 	struct message_macs *macs = (struct message_macs *)
 		((u8 *)skb->data + skb->len - sizeof(*macs));
 	u8 cookie[COOKIE_LEN];
 
-	dst->header.type = cpu_to_le32(MESSAGE_HANDSHAKE_COOKIE);
+	dst->header.type = message_type;
 	dst->receiver_index = index;
 	get_random_bytes_wait(dst->nonce, COOKIE_NONCE_LEN);
 
