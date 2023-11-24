@@ -20,7 +20,7 @@ ifneq ($(V),1)
 MAKEFLAGS += --no-print-directory
 endif
 
-WIREGUARD_VERSION = $(patsubst v%,%,$(shell GIT_CEILING_DIRECTORIES="$(PWD)/../.." git describe --dirty 2>/dev/null))
+WIREGUARD_VERSION = 1.0.0
 
 module:
 	@$(MAKE) -C $(KERNELDIR) M=$(PWD) WIREGUARD_VERSION="$(WIREGUARD_VERSION)" modules

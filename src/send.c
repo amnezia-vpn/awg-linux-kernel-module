@@ -14,9 +14,16 @@
 #include <linux/uio.h>
 #include <linux/inetdevice.h>
 #include <linux/socket.h>
+#include <linux/random.h>
 #include <net/ip_tunnels.h>
 #include <net/udp.h>
 #include <net/sock.h>
+
+u32 wg_get_random_u32_inclusive(u32 floor, u32 ceil)
+{
+	u32 diff = ceil - floor + 1;
+	return floor + (get_random_u32() % diff);
+}
 
 static void wg_packet_send_handshake_initiation(struct wg_peer *peer)
 {
@@ -40,7 +47,7 @@ static void wg_packet_send_handshake_initiation(struct wg_peer *peer)
 		buffer = kzalloc(wg->advanced_security_config.junk_packet_max_size, GFP_KERNEL);
 
 		while (junk_packet_count-- > 0) {
-			junk_packet_size = (u16) get_random_u32_inclusive(
+			junk_packet_size = (u16) wg_get_random_u32_inclusive(
 					wg->advanced_security_config.junk_packet_min_size,
 					wg->advanced_security_config.junk_packet_max_size);
 
@@ -334,7 +341,7 @@ void wg_packet_encrypt_worker(struct work_struct *work)
 
 			if (likely(encrypt_packet(skb,
 					PACKET_CB(first)->keypair,
-					&wg->advanced_security_config.transport_packet_magic_header))) {
+					wg->advanced_security_config.transport_packet_magic_header))) {
 				wg_reset_packet(skb, true);
 			} else {
 				state = PACKET_STATE_DEAD;
