@@ -19,7 +19,7 @@ set -e
 sudo apt-get remove -y git
 sudo add-apt-repository -y ppa:git-core/ppa
 sudo apt-get update
-sudo apt-get install -y --quiet git linux-headers-$(uname -r) build-essential
+sudo apt-get install -y --quiet git linux-headers-$(uname -r) build-essential resolvconf
 git clone --filter=blob:none --sparse ${GIT_BRANCH} ${GIT_URL} /tmp/linux-kernel-source
 pushd /tmp/linux-kernel-source
 git sparse-checkout add drivers/net/wireguard
