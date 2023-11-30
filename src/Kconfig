@@ -1,4 +1,4 @@
-config AMNEZIA
+config AMNEZIAWG
 	tristate "IP: WireGuard (Amnezia VPN) secure network tunnel"
 	depends on NET && INET
 	depends on IPV6 || !IPV6
@@ -21,9 +21,9 @@ config AMNEZIA
 	  It's safe to say Y or M here, as the driver is very lightweight and
 	  is only in use when an administrator chooses to add an interface.
 
-config AMNEZIA_DEBUG
+config AMNEZIAWG_DEBUG
 	bool "Debugging checks and verbose messages"
-	depends on AMNEZIA
+	depends on AMNEZIAWG
 	help
 	  This will write log messages for handshake and other events
 	  that occur for a WireGuard interface. It will also perform some
