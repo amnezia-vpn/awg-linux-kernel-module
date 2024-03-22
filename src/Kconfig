@@ -1,5 +1,5 @@
 config AMNEZIAWG
-	tristate "IP: WireGuard (Amnezia VPN) secure network tunnel"
+	tristate "IP: AmneziaWG secure network tunnel"
 	depends on NET && INET
 	depends on IPV6 || !IPV6
 	select NET_UDP_TUNNEL

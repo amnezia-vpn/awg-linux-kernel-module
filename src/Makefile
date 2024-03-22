@@ -15,8 +15,8 @@ DEPMODBASEDIR ?= /
 
 PWD := $(shell pwd)
 
-all: apply-patches module
-debug: apply-patches module-debug
+all: apply-patches module module-copy
+debug: apply-patches module-debug module-copy
 
 rwildcard=$(foreach d,$(if $3,$(filter-out $3,$(wildcard $1*)),$(wildcard $1*)),$(call rwildcard,$d/,$2,$3) $(filter $(subst *,%,$2),$d))
 
@@ -91,12 +91,11 @@ endif
 
 module:
 	@$(MAKE) -C $(KERNELDIR) M=$(TARGET_BUILD_DIR) WIREGUARD_VERSION="$(WIREGUARD_VERSION)" modules
-	if [ "$(TARGET_BUILD_DIR)" != "$(PWD)" ]; then \
-  		cp $(TARGET_BUILD_DIR)/amneziawg.ko $(PWD)/amneziawg.ko; \
-	fi
 
 module-debug:
 	@$(MAKE) -C $(KERNELDIR) M=$(TARGET_BUILD_DIR) V=1 CONFIG_AMNEZIAWG_DEBUG=y WIREGUARD_VERSION="$(WIREGUARD_VERSION)" modules
+
+module-copy:
 	if [ "$(TARGET_BUILD_DIR)" != "$(PWD)" ]; then \
   		cp $(TARGET_BUILD_DIR)/amneziawg.ko $(PWD)/amneziawg.ko; \
 	fi

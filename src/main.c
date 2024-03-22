@@ -76,7 +76,7 @@ static void __exit wg_mod_exit(void)
 module_init(wg_mod_init);
 module_exit(wg_mod_exit);
 MODULE_LICENSE("GPL v2");
-MODULE_DESCRIPTION("WireGuard (Amnezia VPN) secure network tunnel");
+MODULE_DESCRIPTION("AmneziaWG secure network tunnel");
 MODULE_AUTHOR("Jason A. Donenfeld <Jason@zx2c4.com>");
 MODULE_VERSION(WIREGUARD_VERSION);
 MODULE_ALIAS_RTNL_LINK(KBUILD_MODNAME);
