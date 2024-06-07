@@ -8,6 +8,7 @@
   - [Linux Mint](#linux-mint)
   - [RHEL/CentOS/SUSE/Fedora Core](#rhelcentossusefedora-core)
 - [Manual build](#manual-build)
+- [Configuration](#configuration)
 - [Troubleshooting](#troubleshooting)
 - [License](#license)
 
@@ -99,6 +100,18 @@ and link resulting tree to `kernel` symlink:
     sudo dkms build -m amneziawg -v 1.0.0
     sudo dkms install -m amneziawg -v 1.0.0
     ```
+
+## Configuration
+
+> [!IMPORTANT]
+> All parameters should be the same between Client and Server, except Jc - it can vary.
+
+- Jc — allowed range is from 1 to 128 inclusive; recommended range is from 3 to 10 inclusive
+- Jmin — Jmin < Jmax; recommended value is 50
+- Jmax — Jmin < Jmax ≤ 1280; recommended value is 1000
+- S1 — S1 + 56 ≠ S2; recommended range is from 15 to 150 inclusive
+- S2 — recommended range is from 15 to 150 inclusive
+- H1/H2/H3/H4 — must be unique among each other; recommended range is from 5 to 2147483647 inclusive
 
 ## Troubleshooting
 
