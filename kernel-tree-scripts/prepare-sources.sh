@@ -59,8 +59,10 @@ echo "Downloading source for Linux kernel version ${KERNEL_VERSION}"
 
 if [[ "${DISTRO_FLAVOR}" =~ debian ]]; then
   export DEBIAN_FRONTEND=noninteractive
-  ac=$(apt-cache search --names-only linux-image "${KERNEL_VERSION}" unsigned 2>/dev/null|head -n 1)
-  [ "${ac}" == "" ] && ac=$(apt-cache search --names-only linux-image "${KERNEL_VERSION}" 2>/dev/null|head -n 1)
+  VERSION_MAIN="${KERNEL_VERSION%+*}"
+  VERSION_SUFFIX="${KERNEL_VERSION#*+}"
+  ac=$(apt-cache search --names-only linux-image "${VERSION_MAIN}" "${VERSION_SUFFIX}" unsigned 2>/dev/null|head -n 1)
+  [ "${ac}" == "" ] && ac=$(apt-cache search --names-only linux-image "${VERSION_MAIN}" "${VERSION_SUFFIX}" 2>/dev/null|head -n 1)
   if [ "${ac}" == "" ]; then
     echo "Could not find suitable image for your Linux distribution!"
     exit 255
