@@ -84,7 +84,7 @@ else
   [ -f "${HOME}/.rpmmacros.orig" ] && mv "${HOME}/.rpmmacros.orig" "${HOME}/.rpmmacros"
   cd ../BUILD || exit 255
   cd "$(ls -d */)" || exit 255
-  cd "$(ls -d */)" || exit 255
+  cd "$(ls -d linux*/)" || exit 255
 fi
 
 KERNEL_PATH="$(pwd)"

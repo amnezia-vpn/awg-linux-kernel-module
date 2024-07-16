@@ -58,6 +58,8 @@ sudo apt-get install -y amneziawg
 
 ### RHEL/CentOS/SUSE/Fedora Core
 
+*If you use release that doesn't have DKMS support out of the box, you may need to install [EPEL](https://docs.fedoraproject.org/en-US/epel/#_quickstart) first.*
+
 Open `Terminal` and run:
 
 ```shell
