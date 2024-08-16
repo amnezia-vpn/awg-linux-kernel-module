@@ -125,6 +125,8 @@ enum message_size {
 	MESSAGE_MAX_SIZE = 65535
 };
 
+#define SKB_TYPE_LE32(skb) (((struct message_header *)(skb)->data)->type)
+
 #define SKB_HEADER_LEN                                       \
 	(max(sizeof(struct iphdr), sizeof(struct ipv6hdr)) + \
 	 sizeof(struct udphdr) + NET_SKB_PAD)

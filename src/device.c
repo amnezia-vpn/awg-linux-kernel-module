@@ -485,7 +485,7 @@ int wg_device_handle_post_config(struct net_device *dev, struct amnezia_config *
 	bool a_sec_on = false;
 	int ret = 0;
 
-	if (!asc->advanced_security_enabled)
+	if (!asc->advanced_security)
 		goto out;
 
 	if (asc->junk_packet_count < 0) {
@@ -589,7 +589,7 @@ int wg_device_handle_post_config(struct net_device *dev, struct amnezia_config *
 		ret = -EINVAL;
 	}
 
-	wg->advanced_security_config.advanced_security_enabled = a_sec_on;
+	wg->advanced_security_config.advanced_security = a_sec_on;
 out:
 	return ret;
 }

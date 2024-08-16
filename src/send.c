@@ -43,7 +43,7 @@ static void wg_packet_send_handshake_initiation(struct wg_peer *peer)
 			    peer->device->dev->name, peer->internal_id,
 			    &peer->endpoint.addr);
 
-	if (wg->advanced_security_config.advanced_security_enabled) {
+	if (wg->advanced_security_config.advanced_security && peer->advanced_security) {
 		junk_packet_count = wg->advanced_security_config.junk_packet_count;
 		buffer = kzalloc(wg->advanced_security_config.junk_packet_max_size, GFP_KERNEL);
 
@@ -69,16 +69,19 @@ static void wg_packet_send_handshake_initiation(struct wg_peer *peer)
 	}
 
 	net_dbg_ratelimited("%s: Initiation magic header: %llu\n",
-	                    peer->device->dev->name, wg->advanced_security_config.init_packet_magic_header);
+	                    peer->device->dev->name,
+						peer->advanced_security ? wg->advanced_security_config.init_packet_magic_header :
+						MESSAGE_HANDSHAKE_INITIATION);
 
-	if (wg_noise_handshake_create_initiation(&packet, &peer->handshake, wg->advanced_security_config.init_packet_magic_header)) {
+	if (wg_noise_handshake_create_initiation(&packet, &peer->handshake, peer->advanced_security ?
+			wg->advanced_security_config.init_packet_magic_header : MESSAGE_HANDSHAKE_INITIATION)) {
 		wg_cookie_add_mac_to_packet(&packet, sizeof(packet), peer);
 		wg_timers_any_authenticated_packet_traversal(peer);
 		wg_timers_any_authenticated_packet_sent(peer);
 		atomic64_set(&peer->last_sent_handshake,
 			     ktime_get_coarse_boottime_ns());
 
-		if (wg->advanced_security_config.advanced_security_enabled) {
+		if (wg->advanced_security_config.advanced_security && peer->advanced_security) {
 			net_dbg_ratelimited("%s: Initiation junked packet: %llu\n",
 			                    peer->device->dev->name, wg->advanced_security_config.init_packet_junk_size);
 
@@ -141,7 +144,10 @@ void wg_packet_send_handshake_response(struct wg_peer *peer)
 			    peer->device->dev->name, peer->internal_id,
 			    &peer->endpoint.addr);
 
-	if (wg_noise_handshake_create_response(&packet, &peer->handshake, wg->advanced_security_config.response_packet_magic_header)) {
+	if (wg_noise_handshake_create_response(&packet, &peer->handshake,
+		                                   peer->advanced_security ?
+		                                   wg->advanced_security_config.response_packet_magic_header :
+		                                   MESSAGE_HANDSHAKE_RESPONSE)) {
 		wg_cookie_add_mac_to_packet(&packet, sizeof(packet), peer);
 		if (wg_noise_handshake_begin_session(&peer->handshake,
 						     &peer->keypairs)) {
@@ -150,7 +156,7 @@ void wg_packet_send_handshake_response(struct wg_peer *peer)
 			wg_timers_any_authenticated_packet_sent(peer);
 			atomic64_set(&peer->last_sent_handshake,
 				     ktime_get_coarse_boottime_ns());
-			if (wg->advanced_security_config.advanced_security_enabled) {
+			if (wg->advanced_security_config.advanced_security && peer->advanced_security) {
 				wg_socket_send_junked_buffer_to_peer(peer, &packet,
 				                              sizeof(packet),
 				                              HANDSHAKE_DSCP,
@@ -172,8 +178,16 @@ void wg_packet_send_handshake_cookie(struct wg_device *wg,
 
 	net_dbg_skb_ratelimited("%s: Sending cookie response for denied handshake message for %pISpfsc\n",
 				wg->dev->name, initiating_skb);
-	wg_cookie_message_create(&packet, initiating_skb, sender_index,
-				 &wg->cookie_checker, wg->advanced_security_config.cookie_packet_magic_header);
+
+	if (SKB_TYPE_LE32(initiating_skb) == cpu_to_le32(MESSAGE_HANDSHAKE_INITIATION) ||
+	    SKB_TYPE_LE32(initiating_skb) == cpu_to_le32(MESSAGE_HANDSHAKE_RESPONSE)) {
+		wg_cookie_message_create(&packet, initiating_skb, sender_index,
+		                         &wg->cookie_checker, MESSAGE_HANDSHAKE_COOKIE);
+
+	} else {
+		wg_cookie_message_create(&packet, initiating_skb, sender_index,
+		                         &wg->cookie_checker, wg->advanced_security_config.cookie_packet_magic_header);
+	}
 	wg_socket_send_buffer_as_reply_to_skb(wg, initiating_skb, &packet,
 					      sizeof(packet));
 }
@@ -358,7 +372,8 @@ void wg_packet_encrypt_worker(struct work_struct *work)
 		skb_list_walk_safe(first, skb, next) {
 			wg = PACKET_PEER(first)->device;
 
-			if (likely(encrypt_packet(wg->advanced_security_config.transport_packet_magic_header,
+			if (likely(encrypt_packet(PACKET_PEER(first)->advanced_security ?
+						  wg->advanced_security_config.transport_packet_magic_header : MESSAGE_DATA,
 						  skb,
 						  PACKET_CB(first)->keypair,
 						  &simd_context))) {

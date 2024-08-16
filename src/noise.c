@@ -551,7 +551,7 @@ out:
 
 struct wg_peer *
 wg_noise_handshake_consume_initiation(struct message_handshake_initiation *src,
-				      struct wg_device *wg)
+				      struct wg_device *wg, __le32 message_type)
 {
 	struct wg_peer *peer = NULL, *ret_peer = NULL;
 	struct noise_handshake *handshake;
@@ -628,6 +628,10 @@ out:
 	memzero_explicit(hash, NOISE_HASH_LEN);
 	memzero_explicit(chaining_key, NOISE_HASH_LEN);
 	up_read(&wg->static_identity.lock);
+
+	peer->advanced_security = wg->advanced_security_config.advanced_security &&
+			(message_type == cpu_to_le32(wg->advanced_security_config.init_packet_magic_header));
+
 	if (!ret_peer)
 		wg_peer_put(peer);
 	return ret_peer;

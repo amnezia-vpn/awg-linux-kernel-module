@@ -642,7 +642,7 @@ index 2b19344..c96d2a2 100644
  
  	if (!wg_birthdate_has_expired(atomic64_read(&peer->last_sent_handshake),
  				      REKEY_TIMEOUT))
-@@ -32,14 +43,37 @@ static void wg_packet_send_handshake_initiation(struct wg_peer *peer)
+@@ -32,14 +43,40 @@ static void wg_packet_send_handshake_initiation(struct wg_peer *peer)
  			    peer->device->dev->name, peer->internal_id,
  			    &peer->endpoint.addr);
  
@@ -663,6 +663,9 @@ index 2b19344..c96d2a2 100644
 +
 +		kfree(buffer);
 +	}
++
++	net_dbg_ratelimited("%s: Initiation magic header: %llu\n",
++	                    peer->device->dev->name, wg->advanced_security_config.init_packet_magic_header);
 +
 +	if (wg_noise_handshake_create_initiation(&packet, &peer->handshake, wg->advanced_security_config.init_packet_magic_header)) {
  		wg_cookie_add_mac_to_packet(&packet, sizeof(packet), peer);

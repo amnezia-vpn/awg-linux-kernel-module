@@ -38,7 +38,7 @@ struct prev_queue {
 };
 
 struct amnezia_config {
-	bool advanced_security_enabled;
+	bool advanced_security;
 	u16 junk_packet_count;
 	u16 junk_packet_min_size;
 	u16 junk_packet_max_size;
