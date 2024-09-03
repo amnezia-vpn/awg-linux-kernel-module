@@ -119,8 +119,8 @@ and link resulting tree to `kernel` symlink:
 
 ### Low space on `/tmp` filesystem
 
-Most installation instructions above assumes that you have enough space in system's `/tmp` partition (as setup script needs 
-to manipulate with kernel's sourcetree with is pretty huge).
+Most installation instructions above assume that you have enough space in system's `/tmp` partition (as setup script needs 
+to manipulate with kernel's sourcetree which is pretty huge).
 
 If you can not afford enough space in your `/tmp`, you may override temporary dir by setting `AWG_TEMP_DIR` environment variable
 before the installation:
