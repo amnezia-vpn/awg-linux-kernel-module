@@ -9,6 +9,8 @@
 #include "messages.h"
 #include "queueing.h"
 #include "peerlookup.h"
+#include "netlink.h"
+#include "socket.h"
 
 #include <linux/rcupdate.h>
 #include <linux/slab.h>
@@ -551,10 +553,11 @@ out:
 
 struct wg_peer *
 wg_noise_handshake_consume_initiation(struct message_handshake_initiation *src,
-				      struct wg_device *wg, __le32 message_type)
+				      struct wg_device *wg, struct sk_buff *skb)
 {
 	struct wg_peer *peer = NULL, *ret_peer = NULL;
 	struct noise_handshake *handshake;
+	struct endpoint *endpoint = kzalloc(sizeof(*endpoint), GFP_KERNEL);
 	bool replay_attack, flood_attack;
 	u8 key[NOISE_SYMMETRIC_KEY_LEN];
 	u8 chaining_key[NOISE_HASH_LEN];
@@ -563,6 +566,8 @@ wg_noise_handshake_consume_initiation(struct message_handshake_initiation *src,
 	u8 e[NOISE_PUBLIC_KEY_LEN];
 	u8 t[NOISE_TIMESTAMP_LEN];
 	u64 initiation_consumption;
+	bool advanced_security = wg->advanced_security_config.advanced_security &&
+	                         (SKB_TYPE_LE32(skb) == cpu_to_le32(wg->advanced_security_config.init_packet_magic_header));
 
 	down_read(&wg->static_identity.lock);
 	if (unlikely(!wg->static_identity.has_identity))
@@ -584,9 +589,16 @@ wg_noise_handshake_consume_initiation(struct message_handshake_initiation *src,
 
 	/* Lookup which peer we're actually talking to */
 	peer = wg_pubkey_hashtable_lookup(wg->peer_hashtable, s);
-	if (!peer)
+	if (!peer) {
+		if (unlikely(wg_socket_endpoint_from_skb(endpoint, skb)))
+			goto out;
+
+		net_dbg_skb_ratelimited("%s: unknown peer from %pISpfsc\n", wg->dev->name, skb);
+		wg_genl_mcast_peer_unknown(wg, s, endpoint, advanced_security);
 		goto out;
+	}
 	handshake = &peer->handshake;
+	peer->advanced_security = advanced_security;
 
 	/* ss */
 	if (!mix_precomputed_dh(chaining_key, key,
@@ -629,8 +641,7 @@ out:
 	memzero_explicit(chaining_key, NOISE_HASH_LEN);
 	up_read(&wg->static_identity.lock);
 
-	peer->advanced_security = wg->advanced_security_config.advanced_security &&
-			(message_type == cpu_to_le32(wg->advanced_security_config.init_packet_magic_header));
+	kfree(endpoint);
 
 	if (!ret_peer)
 		wg_peer_put(peer);

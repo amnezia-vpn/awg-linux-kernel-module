@@ -34,7 +34,8 @@ static const struct nla_policy device_policy[WGDEVICE_A_MAX + 1] = {
 	[WGDEVICE_A_H1]		= { .type = NLA_U32 },
 	[WGDEVICE_A_H2]		= { .type = NLA_U32 },
 	[WGDEVICE_A_H3]		= { .type = NLA_U32 },
-	[WGDEVICE_A_H4]		= { .type = NLA_U32 }
+	[WGDEVICE_A_H4]		= { .type = NLA_U32 },
+	[WGDEVICE_A_PEER]	= { .type = NLA_NESTED }
 };
 
 static const struct nla_policy peer_policy[WGPEER_A_MAX + 1] = {
@@ -718,7 +719,14 @@ struct genl_ops genl_ops[] = {
 #ifdef COMPAT_CANNOT_INDIVIDUAL_NETLINK_OPS_POLICY
 		.policy = device_policy,
 #endif
+		// Dummy comment to reduce fuzziness of patch file
 		.flags = GENL_UNS_ADMIN_PERM
+	}
+};
+
+static const struct genl_multicast_group wg_genl_mcgrps[] = {
+	{
+		.name = WG_MULTICAST_GROUP_AUTH
 	}
 };
 
@@ -737,7 +745,9 @@ __ro_after_init = {
 #ifndef COMPAT_CANNOT_INDIVIDUAL_NETLINK_OPS_POLICY
 	.policy = device_policy,
 #endif
-	.netnsok = true
+	.netnsok = true,
+	.mcgrps = wg_genl_mcgrps,
+	.n_mcgrps = ARRAY_SIZE(wg_genl_mcgrps)
 };
 
 int __init wg_genetlink_init(void)
@@ -748,4 +758,63 @@ int __init wg_genetlink_init(void)
 void __exit wg_genetlink_uninit(void)
 {
 	genl_unregister_family(&genl_family);
+}
+
+int wg_genl_mcast_peer_unknown(struct wg_device *wg, const u8 pubkey[NOISE_PUBLIC_KEY_LEN],
+	                           struct endpoint *endpoint, bool advanced_security)
+{
+	struct sk_buff *skb;
+	struct nlattr *peer_nest;
+	void *hdr;
+	int ret = 0;
+
+	skb = genlmsg_new(NLMSG_GOODSIZE, GFP_KERNEL);
+	if (skb == NULL)
+		return -ENOMEM;
+
+	hdr = genlmsg_put(skb, 0, 0, &genl_family, 0, WG_CMD_UNKNOWN_PEER);
+	if (hdr == NULL) {
+		ret = -EMSGSIZE;
+		goto err;
+	}
+
+	if (nla_put_u32(skb, WGDEVICE_A_IFINDEX, wg->dev->ifindex) ||
+	    nla_put_string(skb, WGDEVICE_A_IFNAME, wg->dev->name)) {
+		ret = -EMSGSIZE;
+		goto err;
+	}
+
+	peer_nest = nla_nest_start(skb, WGDEVICE_A_PEER);
+	if (!peer_nest) {
+		ret = -EMSGSIZE;
+		goto err;
+	}
+
+	ret = nla_put(skb, WGPEER_A_PUBLIC_KEY, NOISE_PUBLIC_KEY_LEN, pubkey);
+	if (ret)
+		goto err;
+
+	if (endpoint->addr.sa_family == AF_INET)
+		ret = nla_put(skb, WGPEER_A_ENDPOINT, sizeof(endpoint->addr4), &endpoint->addr4);
+	else if (endpoint->addr.sa_family == AF_INET6)
+		ret = nla_put(skb, WGPEER_A_ENDPOINT, sizeof(endpoint->addr6), &endpoint->addr6);
+
+	if (ret)
+		goto err;
+
+	if (advanced_security) {
+		ret = nla_put_flag(skb, WGPEER_A_ADVANCED_SECURITY);
+		if (ret)
+			goto err;
+	}
+
+	nla_nest_end(skb, peer_nest);
+
+	genlmsg_end(skb, hdr);
+	ret = genlmsg_multicast_netns(&genl_family, dev_net(wg->dev), skb, 0, 0, GFP_KERNEL);
+	return ret;
+
+err:
+	nlmsg_free(skb);
+	return ret;
 }

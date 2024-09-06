@@ -6,6 +6,11 @@
 #ifndef _WG_NETLINK_H
 #define _WG_NETLINK_H
 
+#include "peer.h"
+#include "noise.h"
+
+int wg_genl_mcast_peer_unknown(struct wg_device *wg, const u8 pubkey[NOISE_PUBLIC_KEY_LEN],
+	                           struct endpoint *endpoint, bool advanced_security);
 int wg_genetlink_init(void);
 void wg_genetlink_uninit(void);
 

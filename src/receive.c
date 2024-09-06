@@ -185,7 +185,7 @@ static void wg_receive_handshake_packet(struct wg_device *wg,
 							message->sender_index);
 			return;
 		}
-		peer = wg_noise_handshake_consume_initiation(message, wg, SKB_TYPE_LE32(skb));
+		peer = wg_noise_handshake_consume_initiation(message, wg, skb);
 		if (unlikely(!peer)) {
 			net_dbg_skb_ratelimited("%s: Invalid handshake initiation from %pISpfsc\n",
 						wg->dev->name, skb);
