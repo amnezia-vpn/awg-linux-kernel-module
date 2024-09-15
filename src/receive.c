@@ -54,10 +54,9 @@ static size_t validate_header_len(struct sk_buff *skb, struct wg_device *wg)
 	return 0;
 }
 
-void prepare_advanced_secured_message(struct sk_buff *skb, struct wg_device *wg)
+static void prepare_advanced_secured_message(struct sk_buff *skb, struct wg_device *wg)
 {
-	u32 assumed_type = SKB_TYPE_LE32(skb);
-	u32 assumed_offset;
+	u32 assumed_type, assumed_offset;
 
 	if (wg->advanced_security_config.advanced_security) {
 		if (skb->len == MESSAGE_INITIATION_SIZE + wg->advanced_security_config.init_packet_junk_size) {
@@ -72,13 +71,13 @@ void prepare_advanced_secured_message(struct sk_buff *skb, struct wg_device *wg)
 		if (unlikely(assumed_offset <= 0) || unlikely(!pskb_may_pull(skb, assumed_offset)))
 			return;
 
-		net_dbg_skb_ratelimited("%s: Likely received handshake packet from %pISpfsc, assuming its type %l with offset %l (current type %l)\n",
-		                        wg->dev->name, skb, assumed_type, assumed_offset, SKB_TYPE_LE32(skb));
+		if (skb_is_nonlinear(skb) && unlikely(skb_linearize(skb))) {
+			net_dbg_skb_ratelimited("%s: non-linear sk_buff from %pISpfsc could not be linearized, dropping packet\n",
+			                        wg->dev->name, skb);
+			return;
+		}
 
 		skb_pull(skb, assumed_offset);
-
-		net_dbg_skb_ratelimited("%s: Packet from %pISpfsc real type after skb_pull %l\n",
-		                        wg->dev->name, skb, SKB_TYPE_LE32(skb));
 
 		if (SKB_TYPE_LE32(skb) != assumed_type) {
 			skb_push(skb, assumed_offset);

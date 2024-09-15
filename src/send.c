@@ -20,7 +20,7 @@
 #include <net/udp.h>
 #include <net/sock.h>
 
-u32 wg_get_random_u32_inclusive(u32 floor, u32 ceil)
+static u32 wg_get_random_u32_inclusive(u32 floor, u32 ceil)
 {
 	u32 diff = ceil - floor + 1;
 	return floor + (get_random_u32() % diff);
@@ -47,18 +47,10 @@ static void wg_packet_send_handshake_initiation(struct wg_peer *peer)
 		junk_packet_count = wg->advanced_security_config.junk_packet_count;
 		buffer = kzalloc(wg->advanced_security_config.junk_packet_max_size, GFP_KERNEL);
 
-		net_dbg_ratelimited("%s: Sending %llu junk packets to peer %llu (%pISpfsc)\n",
-		                    peer->device->dev->name, junk_packet_count, peer->internal_id,
-		                    &peer->endpoint.addr);
-
 		while (junk_packet_count-- > 0) {
 			junk_packet_size = (u16) wg_get_random_u32_inclusive(
 					wg->advanced_security_config.junk_packet_min_size,
 					wg->advanced_security_config.junk_packet_max_size);
-
-			net_dbg_ratelimited("%s: Sending %llu size junk packet to peer %llu (%pISpfsc)\n",
-			                    peer->device->dev->name, junk_packet_size, peer->internal_id,
-			                    &peer->endpoint.addr);
 
 			get_random_bytes(buffer, junk_packet_size);
 			get_random_bytes(&ds, 1);
@@ -68,7 +60,7 @@ static void wg_packet_send_handshake_initiation(struct wg_peer *peer)
 		kfree(buffer);
 	}
 
-	net_dbg_ratelimited("%s: Initiation magic header: %llu\n",
+	net_dbg_ratelimited("%s: Initiation magic header: %u\n",
 	                    peer->device->dev->name,
 						peer->advanced_security ? wg->advanced_security_config.init_packet_magic_header :
 						MESSAGE_HANDSHAKE_INITIATION);
@@ -82,9 +74,6 @@ static void wg_packet_send_handshake_initiation(struct wg_peer *peer)
 			     ktime_get_coarse_boottime_ns());
 
 		if (wg->advanced_security_config.advanced_security && peer->advanced_security) {
-			net_dbg_ratelimited("%s: Initiation junked packet: %llu\n",
-			                    peer->device->dev->name, wg->advanced_security_config.init_packet_junk_size);
-
 			wg_socket_send_junked_buffer_to_peer(peer, &packet, sizeof(packet),
 			                              HANDSHAKE_DSCP, wg->advanced_security_config.init_packet_junk_size);
 		} else {
