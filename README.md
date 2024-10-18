@@ -117,6 +117,22 @@ and link resulting tree to `kernel` symlink:
 
 ## Troubleshooting
 
+> [!TIP]
+> Please check [Ubuntu Server documentation](https://documentation.ubuntu.com/server/how-to/wireguard-vpn/troubleshooting) for more troubleshooting steps.
+
+### Enable debug logging
+
+To get more details, you can enable the dynamic debug feature for the module:
+
+```shell
+echo "module amneziawg +p" | sudo tee /sys/kernel/debug/dynamic_debug/control
+```
+
+This will log messages to dmesg, which can be watched live with:
+```shell
+dmesg -wT
+```
+
 ### Low space on `/tmp` filesystem
 
 Most installation instructions above assume that you have enough space in system's `/tmp` partition (as setup script needs 
