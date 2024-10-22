@@ -1,7 +1,7 @@
 %global debug_package %{nil}
 
 Name:           amneziawg-dkms
-Version:        1.0.20240711
+Version:        1.0.20241022
 Release:        1%{?dist}
 Epoch:          1
 URL:            https://www.wireguard.com/
@@ -25,6 +25,7 @@ Requires:       bc
 Requires:       yum-utils
 Requires:       rpm-build
 Requires:       python3-devel
+Requires:       git
 
 %description
 WireGuard is a novel VPN that runs inside the Linux Kernel and uses
@@ -88,6 +89,9 @@ exit 0
 %{_usrsrc}/amneziawg-%{version}
 
 %changelog
+* Thu Oct 22 2024 Yuri Egorov <ye@amnezia.org> - 1.0.20241022-1
+- Update to 1.0.20241022
+
 * Thu Feb 1 2024 Yuri Egorov <ye@amnezia.org> - 1.0.20240201-1
 - Update to 1.0.20240201
 
