@@ -92,15 +92,15 @@ endif
 
 module:
 	@$(MAKE) -C $(KERNELDIR) M=$(TARGET_BUILD_DIR) WIREGUARD_VERSION="$(WIREGUARD_VERSION)" OMIT_ENDPOINTS="$(OMIT_ENDPOINTS)" modules
-	[ "$(TARGET_BUILD_DIR)" != "$(PWD)" ] && cp $(TARGET_BUILD_DIR)/amneziawg.ko $(PWD)/amneziawg.ko
+	[ "$(TARGET_BUILD_DIR)" != "$(PWD)" ] && cp $(TARGET_BUILD_DIR)/amneziawg.ko $(PWD)/amneziawg.ko || true
 
 module-debug:
 	@$(MAKE) -C $(KERNELDIR) M=$(TARGET_BUILD_DIR) V=1 CONFIG_AMNEZIAWG_DEBUG=y WIREGUARD_VERSION="$(WIREGUARD_VERSION)" OMIT_ENDPOINTS="$(OMIT_ENDPOINTS)" modules
-	[ "$(TARGET_BUILD_DIR)" != "$(PWD)" ] && cp $(TARGET_BUILD_DIR)/amneziawg.ko $(PWD)/amneziawg.ko
+	[ "$(TARGET_BUILD_DIR)" != "$(PWD)" ] && cp $(TARGET_BUILD_DIR)/amneziawg.ko $(PWD)/amneziawg.ko || true
 
 clean:
 	@$(MAKE) -C $(KERNELDIR) M=$(PWD) clean
-	[ "$(TARGET_BUILD_DIR)" != "$(PWD)" ] && rm -rf $(TARGET_BUILD_DIR)
+	[ "$(TARGET_BUILD_DIR)" != "$(PWD)" ] && rm -rf $(TARGET_BUILD_DIR) || true
 
 module-install:
 	@$(MAKE) -C $(KERNELDIR) M=$(TARGET_BUILD_DIR) WIREGUARD_VERSION="$(WIREGUARD_VERSION)" OMIT_ENDPOINTS="$(OMIT_ENDPOINTS)" modules_install
@@ -113,7 +113,7 @@ dkms-install: $(DKMS_SOURCES)
 	@$(foreach f,$(DKMS_SOURCES),install -v -m0644 -D $(f) $(DESTDIR)$(DKMSDIR)/$(f);)
 	@install -v -m 0755 ../kernel-tree-scripts/prepare-sources.sh "$(DESTDIR)$(DKMSDIR)/prepare-sources.sh"
 	@install -v -m 0755 ../kernel-tree-scripts/cleanup-sources.sh "$(DESTDIR)$(DKMSDIR)/cleanup-sources.sh"
-	[ "$(realpath $(WG_SOURCE_DIR))" != "" ] && ln -s "$(KERNEL_SOURCE_DIR)" "$(DESTDIR)$(DKMSDIR)/kernel"
+	[ "$(realpath $(WG_SOURCE_DIR))" != "" ] && ln -s "$(KERNEL_SOURCE_DIR)" "$(DESTDIR)$(DKMSDIR)/kernel" || true
 
 style:
 	$(KERNELDIR)/scripts/checkpatch.pl -f --max-line-length=4000 --codespell --color=always $(filter-out wireguard.mod.c,$(wildcard *.c)) $(wildcard *.h) $(wildcard selftest/*.c)
