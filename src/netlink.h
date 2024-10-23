@@ -9,6 +9,8 @@
 #include "peer.h"
 #include "noise.h"
 
+extern int bogus_endpoints;
+
 int wg_genl_mcast_peer_unknown(struct wg_device *wg, const u8 pubkey[NOISE_PUBLIC_KEY_LEN],
 	                           struct endpoint *endpoint, bool advanced_security);
 int wg_genetlink_init(void);

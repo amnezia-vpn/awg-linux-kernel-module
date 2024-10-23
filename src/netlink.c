@@ -14,6 +14,9 @@
 #include <net/genetlink.h>
 #include <net/sock.h>
 #include <crypto/algapi.h>
+#include <linux/random.h>
+
+int bogus_endpoints = 0;
 
 static struct genl_family genl_family;
 
@@ -164,18 +167,27 @@ get_peer(struct wg_peer *peer, struct sk_buff *skb, struct dump_ctx *ctx)
 		    nla_put_u32(skb, WGPEER_A_PROTOCOL_VERSION, 1))
 			goto err;
 
+#ifndef OMIT_ENDPOINTS
 		read_lock_bh(&peer->endpoint_lock);
-		if (peer->endpoint.addr.sa_family == AF_INET)
-			fail = nla_put(skb, WGPEER_A_ENDPOINT,
-				       sizeof(peer->endpoint.addr4),
-				       &peer->endpoint.addr4);
-		else if (peer->endpoint.addr.sa_family == AF_INET6)
-			fail = nla_put(skb, WGPEER_A_ENDPOINT,
-				       sizeof(peer->endpoint.addr6),
-				       &peer->endpoint.addr6);
+		if (peer->endpoint.addr.sa_family == AF_INET) {
+			struct sockaddr_in addr4 = peer->endpoint.addr4;
+
+			if (bogus_endpoints)
+				addr4.sin_addr.s_addr = get_random_u32();
+
+			fail = nla_put(skb, WGPEER_A_ENDPOINT, sizeof(addr4), &addr4);
+		} else if (peer->endpoint.addr.sa_family == AF_INET6) {
+			struct sockaddr_in6 addr6 = peer->endpoint.addr6;
+
+			if (bogus_endpoints)
+				get_random_bytes(&addr6.sin6_addr.s6_addr, sizeof(addr6.sin6_addr.s6_addr));
+
+			fail = nla_put(skb, WGPEER_A_ENDPOINT, sizeof(addr6), &addr6);
+		}
 		read_unlock_bh(&peer->endpoint_lock);
 		if (fail)
 			goto err;
+#endif
 		allowedips_node =
 			list_first_entry_or_null(&peer->allowedips_list,
 					struct allowedips_node, peer_list);

@@ -75,6 +75,7 @@ static void __exit wg_mod_exit(void)
 	wg_allowedips_slab_uninit();
 }
 
+module_param(bogus_endpoints, int, 0600);
 module_init(wg_mod_init);
 module_exit(wg_mod_exit);
 MODULE_LICENSE("GPL v2");

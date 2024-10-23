@@ -17,6 +17,12 @@ is_modern_kernel() {
   fi
 }
 
+cd_first () {
+  local prefix=$1
+  local first=$(find ./${prefix}* -maxdepth 0 -type d 2>/dev/null | sort | head -n 1)
+  [ "${first}" != "" ] && cd "${first}" || exit 255
+}
+
 if ! is_modern_kernel; then
   echo "Legacy kernel - using the compat sources"
   exit 0
@@ -72,7 +78,7 @@ if [[ "${DISTRO_FLAVOR}" =~ debian ]]; then
   PACKAGE_VERSION=$(apt-cache madison "${PACKAGE_NAME}"|grep Sources|head -n 1|awk '{ print $3; }')
   echo "Downloading as $(whoami)"
   apt-get -yq -o APT::Sandbox::User="$(whoami)" source "${PACKAGE_NAME}=${PACKAGE_VERSION}"
-  cd "$(ls -d */)" || exit 255
+  cd_first
 else
   yumdownloader --source kernel
   [ -f "${HOME}/.rpmmacros" ] && mv "${HOME}/.rpmmacros" "${HOME}/.rpmmacros.orig"
@@ -83,8 +89,8 @@ else
   rm -rf "${HOME}/.rpmmacros"
   [ -f "${HOME}/.rpmmacros.orig" ] && mv "${HOME}/.rpmmacros.orig" "${HOME}/.rpmmacros"
   cd ../BUILD || exit 255
-  cd "$(find ./* -maxdepth 0 -type d | sort | head -n 1)" || exit 255
-  cd "$(ls -d linux*/)" || exit 255
+  cd_first
+  cd_first linux
 fi
 
 KERNEL_PATH="$(pwd)"

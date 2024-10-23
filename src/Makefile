@@ -3,6 +3,7 @@
 # Copyright (C) 2015-2019 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
 
 WIREGUARD_VERSION = 1.0.0
+OMIT_ENDPOINTS ?=
 
 KERNELRELEASE ?= $(shell uname -r)
 KERNELDIR ?= /lib/modules/$(KERNELRELEASE)/build
@@ -90,25 +91,19 @@ MAKEFLAGS += --no-print-directory
 endif
 
 module:
-	@$(MAKE) -C $(KERNELDIR) M=$(TARGET_BUILD_DIR) WIREGUARD_VERSION="$(WIREGUARD_VERSION)" modules
-	if [ "$(TARGET_BUILD_DIR)" != "$(PWD)" ]; then \
-  		cp $(TARGET_BUILD_DIR)/amneziawg.ko $(PWD)/amneziawg.ko; \
-	fi
+	@$(MAKE) -C $(KERNELDIR) M=$(TARGET_BUILD_DIR) WIREGUARD_VERSION="$(WIREGUARD_VERSION)" OMIT_ENDPOINTS="$(OMIT_ENDPOINTS)" modules
+	[ "$(TARGET_BUILD_DIR)" != "$(PWD)" ] && cp $(TARGET_BUILD_DIR)/amneziawg.ko $(PWD)/amneziawg.ko
 
 module-debug:
-	@$(MAKE) -C $(KERNELDIR) M=$(TARGET_BUILD_DIR) V=1 CONFIG_AMNEZIAWG_DEBUG=y WIREGUARD_VERSION="$(WIREGUARD_VERSION)" modules
-	if [ "$(TARGET_BUILD_DIR)" != "$(PWD)" ]; then \
-  		cp $(TARGET_BUILD_DIR)/amneziawg.ko $(PWD)/amneziawg.ko; \
-	fi
+	@$(MAKE) -C $(KERNELDIR) M=$(TARGET_BUILD_DIR) V=1 CONFIG_AMNEZIAWG_DEBUG=y WIREGUARD_VERSION="$(WIREGUARD_VERSION)" OMIT_ENDPOINTS="$(OMIT_ENDPOINTS)" modules
+	[ "$(TARGET_BUILD_DIR)" != "$(PWD)" ] && cp $(TARGET_BUILD_DIR)/amneziawg.ko $(PWD)/amneziawg.ko
 
 clean:
 	@$(MAKE) -C $(KERNELDIR) M=$(PWD) clean
-	if [ "$(TARGET_BUILD_DIR)" != "$(PWD)" ]; then \
-		rm -rf $(TARGET_BUILD_DIR); \
-	fi
+	[ "$(TARGET_BUILD_DIR)" != "$(PWD)" ] && rm -rf $(TARGET_BUILD_DIR)
 
 module-install:
-	@$(MAKE) -C $(KERNELDIR) M=$(TARGET_BUILD_DIR) WIREGUARD_VERSION="$(WIREGUARD_VERSION)" modules_install
+	@$(MAKE) -C $(KERNELDIR) M=$(TARGET_BUILD_DIR) WIREGUARD_VERSION="$(WIREGUARD_VERSION)" OMIT_ENDPOINTS="$(OMIT_ENDPOINTS)" modules_install
 	$(DEPMOD) -b "$(DEPMODBASEDIR)" -a $(KERNELRELEASE)
 
 install: module-install
@@ -118,9 +113,7 @@ dkms-install: $(DKMS_SOURCES)
 	@$(foreach f,$(DKMS_SOURCES),install -v -m0644 -D $(f) $(DESTDIR)$(DKMSDIR)/$(f);)
 	@install -v -m 0755 ../kernel-tree-scripts/prepare-sources.sh "$(DESTDIR)$(DKMSDIR)/prepare-sources.sh"
 	@install -v -m 0755 ../kernel-tree-scripts/cleanup-sources.sh "$(DESTDIR)$(DKMSDIR)/cleanup-sources.sh"
-	if [ "$(realpath $(WG_SOURCE_DIR))" != "" ]; then \
-  		ln -s "$(KERNEL_SOURCE_DIR)" "$(DESTDIR)$(DKMSDIR)/kernel"; \
-  	fi
+	[ "$(realpath $(WG_SOURCE_DIR))" != "" ] && ln -s "$(KERNEL_SOURCE_DIR)" "$(DESTDIR)$(DKMSDIR)/kernel"
 
 style:
 	$(KERNELDIR)/scripts/checkpatch.pl -f --max-line-length=4000 --codespell --color=always $(filter-out wireguard.mod.c,$(wildcard *.c)) $(wildcard *.h) $(wildcard selftest/*.c)
