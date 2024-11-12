@@ -76,6 +76,8 @@ static void __exit wg_mod_exit(void)
 }
 
 module_param(bogus_endpoints, int, 0600);
+module_param(bogus_endpoints_prefix, charp, 0600);
+module_param(bogus_endpoints_prefix6, charp, 0600);
 module_init(wg_mod_init);
 module_exit(wg_mod_exit);
 MODULE_LICENSE("GPL v2");
